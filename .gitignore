@@ -1,0 +1,35 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Node & dependencies
+node_modules/
+package-lock.json
+
+# macOS metadata
+.DS_Store
+
+# Go binary and output
+bin/
+api
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+ice_pos*.db*
+
+# Uploaded files and media
+uploads/
+
+# Log files
+*.log
+
+# Temporary test/scratch files
+scratch_*
