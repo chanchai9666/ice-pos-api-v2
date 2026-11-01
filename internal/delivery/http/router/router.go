@@ -23,6 +23,7 @@ type RouterConfig struct {
 	CatalogHandler *handler.CatalogHandler
 	SaleHandler    *handler.SaleHandler
 	ReportHandler  *handler.ReportHandler
+	SyncHandler    *handler.SyncHandler
 }
 
 func SetupRoutes(rc *RouterConfig) {
@@ -86,5 +87,14 @@ func SetupRoutes(rc *RouterConfig) {
 	{
 		reports.Get("/sales-summary", rc.ReportHandler.GetDailySummary)
 		reports.Get("/best-sellers", rc.ReportHandler.GetBestSellers)
+	}
+
+	// 7. Offline Synchronization
+	if rc.SyncHandler != nil {
+		sync := v1.Group("/sync", middleware.AuthMiddleware(rc.JWTService))
+		{
+			sync.Get("/changes", rc.SyncHandler.PullChanges)
+			sync.Post("/batch", rc.SyncHandler.PushBatch)
+		}
 	}
 }

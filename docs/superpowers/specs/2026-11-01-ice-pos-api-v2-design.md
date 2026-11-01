@@ -37,6 +37,9 @@
 - **Dynamic Daily Reports:** สรุปยอดขายประจำวันและรายงานสินค้าขายดีแบบ On-the-fly ตามช่วงวันที่ ไม่ต้องทำ Day-Close
 - **Single Branch Operation:** สาขาเดียวเป็นค่าเริ่มต้น (ไม่ต้องส่ง `branch_id`)
 - **Zero Shift Friction:** ไม่ต้องเปิด/ปิดกะ ไม่ต้องมีลิ้นชักเก็บเงิน
+- **Lightweight Offline Sync Engine:**
+  - `GET /api/v1/sync/changes?since=...`: ดาวน์โหลดสินค้า/หมวดหมู่ลงแท็บเล็ตหน้าร้าน เพื่อให้คิดเงินออฟไลน์ได้เวลาเน็ตหลุด
+  - `POST /api/v1/sync/batch`: ส่งชุดข้อมูลบิลขาย (ทั้ง `COMPLETED` และ `VOID`) ขึ้นเซิร์ฟเวอร์แบบ Idempotent เมื่อต่อเน็ตได้
 - **Preserved Core Features:**
   - Login ด้วย Username/Password และ PIN (JWT auth)
   - Admin API สำหรับจัดการผู้ใช้งานและรีเซ็ตรหัส PIN (`/users`)

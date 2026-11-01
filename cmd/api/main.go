@@ -43,6 +43,7 @@ func main() {
 	catalogRepo := repository.NewCatalogRepository(db)
 	saleRepo := repository.NewSaleRepository(db)
 	reportRepo := repository.NewReportRepository(db)
+	syncRepo := repository.NewSyncRepository(db)
 
 	// 6. Usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService)
@@ -50,6 +51,7 @@ func main() {
 	catalogUsecase := usecase.NewCatalogUsecase(catalogRepo)
 	saleUsecase := usecase.NewSaleUsecase(saleRepo, catalogRepo)
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
+	syncUsecase := usecase.NewSyncUsecase(syncRepo)
 
 	// 7. Handlers
 	healthHandler := handler.NewHealthHandler()
@@ -58,6 +60,7 @@ func main() {
 	catalogHandler := handler.NewCatalogHandler(catalogUsecase)
 	saleHandler := handler.NewSaleHandler(saleUsecase)
 	reportHandler := handler.NewReportHandler(reportUsecase)
+	syncHandler := handler.NewSyncHandler(syncUsecase)
 
 	// 8. Fiber v3 App
 	app := fiber.New(fiber.Config{
@@ -78,6 +81,7 @@ func main() {
 		CatalogHandler: catalogHandler,
 		SaleHandler:    saleHandler,
 		ReportHandler:  reportHandler,
+		SyncHandler:    syncHandler,
 	})
 
 	// 10. Graceful Shutdown
