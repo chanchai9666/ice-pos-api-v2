@@ -15,4 +15,3 @@ func (h *HealthHandler) Check(c fiber.Ctx) error {
 		"version": "2.0.0",
 	})
 }
-

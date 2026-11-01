@@ -33,18 +33,7 @@ func (r *saleRepository) GenerateNextSaleNo(ctx context.Context, t time.Time) (s
 }
 
 func (r *saleRepository) CreateSale(ctx context.Context, sale *domain.Sale) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(sale).Error; err != nil {
-			return err
-		}
-		for i := range sale.Lines {
-			sale.Lines[i].SaleID = sale.ID
-			if err := tx.Create(&sale.Lines[i]).Error; err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	return r.db.WithContext(ctx).Create(sale).Error
 }
 
 func (r *saleRepository) GetSaleByID(ctx context.Context, id string) (*domain.Sale, error) {
@@ -102,4 +91,3 @@ func (r *saleRepository) VoidSale(ctx context.Context, id, reason string) error 
 	}
 	return nil
 }
-

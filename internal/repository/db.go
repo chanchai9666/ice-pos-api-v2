@@ -125,4 +125,3 @@ func seedUsers(db *gorm.DB) {
 	db.Create(&p1)
 	db.Create(&p2)
 }
-

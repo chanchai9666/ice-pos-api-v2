@@ -84,4 +84,3 @@ func (h *CatalogHandler) ListCategories(c fiber.Ctx) error {
 		"data":    cats,
 	})
 }
-

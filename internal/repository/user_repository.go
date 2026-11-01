@@ -75,4 +75,3 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 func (r *userRepository) UpdatePin(ctx context.Context, userID, newPinHash string) error {
 	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Update("pin_hash", newPinHash).Error
 }
-

@@ -36,8 +36,8 @@ type SaleItem struct {
 	ProductID    string `json:"product_id" gorm:"size:36;index;not null"`
 	ProductName  string `json:"product_name" gorm:"size:200;not null"`
 	ProductCode  string `json:"product_code" gorm:"size:50;not null"`
-	UnitPrice    int64  `json:"unit_price" gorm:"not null"`     // Satang
-	CostPrice    int64  `json:"cost_price" gorm:"default:0"`    // Satang (snapshot for profit calculation)
+	UnitPrice    int64  `json:"unit_price" gorm:"not null"`  // Satang
+	CostPrice    int64  `json:"cost_price" gorm:"default:0"` // Satang (snapshot for profit calculation)
 	Qty          int    `json:"qty" gorm:"not null"`
 	LineDiscount int64  `json:"line_discount" gorm:"default:0"` // Satang
 	GrossTotal   int64  `json:"gross_total" gorm:"not null"`    // Satang
@@ -45,16 +45,16 @@ type SaleItem struct {
 }
 
 type Receipt struct {
-	ReceiptNo   string    `json:"receipt_no"`
-	SaleNo      string    `json:"sale_no"`
-	OccurredAt  time.Time `json:"occurred_at"`
-	CashierName string    `json:"cashier_name"`
-	SubTotal    int64     `json:"subtotal"`
-	Discount    int64     `json:"discount"`
-	GrandTotal  int64     `json:"grand_total"`
-	Tendered    int64     `json:"tendered"`
-	Change      int64     `json:"change"`
-	Status      string    `json:"status"`
+	ReceiptNo   string        `json:"receipt_no"`
+	SaleNo      string        `json:"sale_no"`
+	OccurredAt  time.Time     `json:"occurred_at"`
+	CashierName string        `json:"cashier_name"`
+	SubTotal    int64         `json:"subtotal"`
+	Discount    int64         `json:"discount"`
+	GrandTotal  int64         `json:"grand_total"`
+	Tendered    int64         `json:"tendered"`
+	Change      int64         `json:"change"`
+	Status      string        `json:"status"`
 	Items       []ReceiptItem `json:"items"`
 }
 

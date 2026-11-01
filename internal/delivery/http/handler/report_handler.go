@@ -42,4 +42,3 @@ func (h *ReportHandler) GetBestSellers(c fiber.Ctx) error {
 		"data":    items,
 	})
 }
-

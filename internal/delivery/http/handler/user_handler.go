@@ -69,4 +69,3 @@ func (h *UserHandler) ResetPin(c fiber.Ctx) error {
 		"message": "PIN updated successfully",
 	})
 }
-

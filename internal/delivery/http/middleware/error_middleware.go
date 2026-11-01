@@ -43,4 +43,3 @@ func CustomErrorHandler(c fiber.Ctx, err error) error {
 		"message": err.Error(),
 	})
 }
-

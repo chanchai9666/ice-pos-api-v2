@@ -120,4 +120,3 @@ func (h *SaleHandler) VoidSale(c fiber.Ctx) error {
 		"message": "บิลถูกยกเลิกเรียบร้อยแล้ว",
 	})
 }
-

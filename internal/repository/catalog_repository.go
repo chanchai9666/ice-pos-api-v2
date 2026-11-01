@@ -109,4 +109,3 @@ func (r *catalogRepository) GetCategoryByID(ctx context.Context, id string) (*do
 func (r *catalogRepository) CreateCategory(ctx context.Context, category *domain.Category) error {
 	return r.db.WithContext(ctx).Create(category).Error
 }
-

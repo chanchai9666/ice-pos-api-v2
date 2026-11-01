@@ -50,4 +50,3 @@ func RequireRoles(roles ...string) fiber.Handler {
 		return domain.ErrForbidden
 	}
 }
-

@@ -68,4 +68,3 @@ func (h *AuthHandler) GetMe(c fiber.Ctx) error {
 		},
 	})
 }
-

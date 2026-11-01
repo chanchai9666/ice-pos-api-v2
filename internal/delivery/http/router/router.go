@@ -88,4 +88,3 @@ func SetupRoutes(rc *RouterConfig) {
 		reports.Get("/best-sellers", rc.ReportHandler.GetBestSellers)
 	}
 }
-
