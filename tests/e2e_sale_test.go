@@ -45,10 +45,13 @@ func setupTestApp(t *testing.T) (*fiber.App, func()) {
 	saleRepo := repository.NewSaleRepository(db)
 	reportRepo := repository.NewReportRepository(db)
 
+	customerRepo := repository.NewCustomerRepository(db)
+	customerUc := usecase.NewCustomerUsecase(customerRepo)
+
 	authUc := usecase.NewAuthUsecase(userRepo, jwtService)
 	userUc := usecase.NewUserUsecase(userRepo)
 	catUc := usecase.NewCatalogUsecase(catalogRepo)
-	saleUc := usecase.NewSaleUsecase(saleRepo, catalogRepo)
+	saleUc := usecase.NewSaleUsecase(saleRepo, catalogRepo, customerRepo)
 	reportUc := usecase.NewReportUsecase(reportRepo)
 
 	app := fiber.New(fiber.Config{
@@ -56,15 +59,16 @@ func setupTestApp(t *testing.T) (*fiber.App, func()) {
 	})
 
 	router.SetupRoutes(&router.RouterConfig{
-		App:            app,
-		Config:         cfg,
-		JWTService:     jwtService,
-		HealthHandler:  handler.NewHealthHandler(),
-		AuthHandler:    handler.NewAuthHandler(authUc),
-		UserHandler:    handler.NewUserHandler(userUc),
-		CatalogHandler: handler.NewCatalogHandler(catUc),
-		SaleHandler:    handler.NewSaleHandler(saleUc),
-		ReportHandler:  handler.NewReportHandler(reportUc),
+		App:             app,
+		Config:          cfg,
+		JWTService:      jwtService,
+		HealthHandler:   handler.NewHealthHandler(),
+		AuthHandler:     handler.NewAuthHandler(authUc, cfg),
+		UserHandler:     handler.NewUserHandler(userUc),
+		CatalogHandler:  handler.NewCatalogHandler(catUc),
+		CustomerHandler: handler.NewCustomerHandler(customerUc),
+		SaleHandler:     handler.NewSaleHandler(saleUc),
+		ReportHandler:   handler.NewReportHandler(reportUc),
 	})
 
 	cleanup := func() {

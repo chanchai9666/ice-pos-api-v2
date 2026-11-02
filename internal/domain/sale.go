@@ -8,6 +8,9 @@ import (
 const (
 	SaleStatusCompleted = "COMPLETED"
 	SaleStatusVoid      = "VOID"
+
+	PaymentMethodCash   = "CASH"
+	PaymentMethodCredit = "CREDIT"
 )
 
 type Sale struct {
@@ -18,6 +21,10 @@ type Sale struct {
 	GrandTotal     int64      `json:"grand_total" gorm:"not null"`     // Satang
 	TenderedAmount int64      `json:"tendered_amount" gorm:"not null"` // Satang (cash received)
 	ChangeAmount   int64      `json:"change_amount" gorm:"not null"`   // Satang (change calculated)
+	PaymentMethod  string     `json:"payment_method" gorm:"size:20;not null;default:'CASH'"`
+	CustomerID     *string    `json:"customer_id,omitempty" gorm:"size:36;index"`
+	CustomerName   string     `json:"customer_name,omitempty" gorm:"size:150"`
+	CreditAmount   int64      `json:"credit_amount" gorm:"default:0"`
 	Status         string     `json:"status" gorm:"size:20;not null;default:'COMPLETED'"`
 	VoidReason     string     `json:"void_reason,omitempty" gorm:"size:255"`
 	VoidedAt       *time.Time `json:"voided_at,omitempty"`
@@ -45,17 +52,19 @@ type SaleItem struct {
 }
 
 type Receipt struct {
-	ReceiptNo   string        `json:"receipt_no"`
-	SaleNo      string        `json:"sale_no"`
-	OccurredAt  time.Time     `json:"occurred_at"`
-	CashierName string        `json:"cashier_name"`
-	SubTotal    int64         `json:"subtotal"`
-	Discount    int64         `json:"discount"`
-	GrandTotal  int64         `json:"grand_total"`
-	Tendered    int64         `json:"tendered"`
-	Change      int64         `json:"change"`
-	Status      string        `json:"status"`
-	Items       []ReceiptItem `json:"items"`
+	ReceiptNo     string        `json:"receipt_no"`
+	SaleNo        string        `json:"sale_no"`
+	OccurredAt    time.Time     `json:"occurred_at"`
+	CashierName   string        `json:"cashier_name"`
+	CustomerName  string        `json:"customer_name,omitempty"`
+	PaymentMethod string        `json:"payment_method"`
+	SubTotal      int64         `json:"subtotal"`
+	Discount      int64         `json:"discount"`
+	GrandTotal    int64         `json:"grand_total"`
+	Tendered      int64         `json:"tendered"`
+	Change        int64         `json:"change"`
+	Status        string        `json:"status"`
+	Items         []ReceiptItem `json:"items"`
 }
 
 type ReceiptItem struct {
@@ -75,6 +84,7 @@ type SaleRepository interface {
 }
 
 type SaleUsecase interface {
+	Checkout(ctx context.Context, cashierID string, lines []SaleItem, billDiscount, tenderedAmount int64, paymentMethod, customerID string) (*Sale, *Receipt, error)
 	CheckoutCash(ctx context.Context, cashierID string, lines []SaleItem, billDiscount, tenderedAmount int64) (*Sale, *Receipt, error)
 	GetSaleByID(ctx context.Context, id string) (*Sale, error)
 	GetReceipt(ctx context.Context, saleNoOrID string) (*Receipt, error)

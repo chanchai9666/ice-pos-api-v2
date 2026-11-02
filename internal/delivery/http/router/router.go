@@ -2,28 +2,33 @@ package router
 
 import (
 	"ice-pos-api-v2/config"
+	_ "ice-pos-api-v2/docs/swagger"
 	"ice-pos-api-v2/internal/delivery/http/handler"
 	"ice-pos-api-v2/internal/delivery/http/middleware"
 	"ice-pos-api-v2/internal/domain"
 	"ice-pos-api-v2/internal/pkg/jwt"
 
+	swaggo "github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/static"
 )
 
 type RouterConfig struct {
-	App            *fiber.App
-	Config         *config.Config
-	JWTService     *jwt.Service
-	HealthHandler  *handler.HealthHandler
-	AuthHandler    *handler.AuthHandler
-	UserHandler    *handler.UserHandler
-	CatalogHandler *handler.CatalogHandler
-	SaleHandler    *handler.SaleHandler
-	ReportHandler  *handler.ReportHandler
-	SyncHandler    *handler.SyncHandler
+	App             *fiber.App
+	Config          *config.Config
+	JWTService      *jwt.Service
+	HealthHandler   *handler.HealthHandler
+	AuthHandler     *handler.AuthHandler
+	UserHandler     *handler.UserHandler
+	CatalogHandler  *handler.CatalogHandler
+	SaleHandler     *handler.SaleHandler
+	ReportHandler   *handler.ReportHandler
+	SyncHandler     *handler.SyncHandler
+	CustomerHandler *handler.CustomerHandler
+	UploadHandler   *handler.UploadHandler
 }
 
 func SetupRoutes(rc *RouterConfig) {
@@ -37,6 +42,19 @@ func SetupRoutes(rc *RouterConfig) {
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 	}))
 
+	// Static files serving for uploaded assets (e.g. /uploads/images/...)
+	if rc.Config != nil && rc.Config.UploadDir != "" {
+		rc.App.Use("/uploads", static.New(rc.Config.UploadDir, static.Config{
+			Browse: false,
+		}))
+	}
+
+	// Swagger API Docs
+	rc.App.Get("/swagger", func(c fiber.Ctx) error {
+		return c.Redirect().To("/swagger/index.html")
+	})
+	rc.App.Get("/swagger/*", swaggo.HandlerDefault)
+
 	v1 := rc.App.Group("/api/v1")
 
 	// 1. Health
@@ -47,6 +65,8 @@ func SetupRoutes(rc *RouterConfig) {
 	{
 		auth.Post("/login", rc.AuthHandler.Login)
 		auth.Post("/pin-login", rc.AuthHandler.PinLogin)
+		auth.Post("/refresh", rc.AuthHandler.RefreshToken)
+		auth.Post("/logout", rc.AuthHandler.Logout)
 		auth.Get("/me", middleware.AuthMiddleware(rc.JWTService), rc.AuthHandler.GetMe)
 	}
 
@@ -65,6 +85,9 @@ func SetupRoutes(rc *RouterConfig) {
 		products.Get("/barcode/:barcode", rc.CatalogHandler.GetProductByBarcode)
 		products.Get("/:id", rc.CatalogHandler.GetProductByID)
 		products.Post("", middleware.AuthMiddleware(rc.JWTService), middleware.RequireRoles(domain.RoleAdmin), rc.CatalogHandler.CreateProduct)
+		if rc.UploadHandler != nil {
+			products.Post("/:id/image", middleware.AuthMiddleware(rc.JWTService), rc.UploadHandler.UploadProductImage)
+		}
 	}
 
 	categories := v1.Group("/categories")
@@ -72,24 +95,48 @@ func SetupRoutes(rc *RouterConfig) {
 		categories.Get("", rc.CatalogHandler.ListCategories)
 	}
 
-	// 5. Sales & Checkout (Protected for authenticated cashiers / admins)
+	// 5. Image Uploads
+	if rc.UploadHandler != nil {
+		uploads := v1.Group("/uploads", middleware.AuthMiddleware(rc.JWTService))
+		{
+			uploads.Post("/images", rc.UploadHandler.UploadImage)
+		}
+	}
+
+	// 6. Customers & Credit Accounts
+	if rc.CustomerHandler != nil {
+		customers := v1.Group("/customers", middleware.AuthMiddleware(rc.JWTService))
+		{
+			customers.Post("", rc.CustomerHandler.CreateCustomer)
+			customers.Get("", rc.CustomerHandler.GetAllCustomers)
+			customers.Get("/reports/ar-aging", rc.CustomerHandler.GetARAgingReport)
+			customers.Get("/:id", rc.CustomerHandler.GetCustomerByID)
+			customers.Put("/:id", rc.CustomerHandler.UpdateCustomer)
+			customers.Delete("/:id", rc.CustomerHandler.DeleteCustomer)
+			customers.Put("/:id/credit-limit", rc.CustomerHandler.SetCreditLimit)
+			customers.Post("/:id/pay-credit", rc.CustomerHandler.PayCredit)
+			customers.Get("/:id/credit-history", rc.CustomerHandler.GetCreditHistory)
+		}
+	}
+
+	// 7. Sales & Checkout (Protected for authenticated cashiers / admins)
 	sales := v1.Group("/sales", middleware.AuthMiddleware(rc.JWTService))
 	{
-		sales.Post("", rc.SaleHandler.CheckoutCash)
+		sales.Post("", rc.SaleHandler.Checkout)
 		sales.Get("", rc.SaleHandler.ListSales)
 		sales.Get("/receipt/:receiptNo", rc.SaleHandler.GetReceipt)
 		sales.Get("/:id", rc.SaleHandler.GetSaleByID)
 		sales.Post("/:id/void", rc.SaleHandler.VoidSale)
 	}
 
-	// 6. Reports & Analytics
+	// 8. Reports & Analytics
 	reports := v1.Group("/reports", middleware.AuthMiddleware(rc.JWTService))
 	{
 		reports.Get("/sales-summary", rc.ReportHandler.GetDailySummary)
 		reports.Get("/best-sellers", rc.ReportHandler.GetBestSellers)
 	}
 
-	// 7. Offline Synchronization
+	// 9. Offline Synchronization
 	if rc.SyncHandler != nil {
 		sync := v1.Group("/sync", middleware.AuthMiddleware(rc.JWTService))
 		{

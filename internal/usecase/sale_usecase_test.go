@@ -73,7 +73,7 @@ func TestSaleUsecase(t *testing.T) {
 		},
 	}
 	saleRepo := &mockSaleRepo{}
-	saleUc := usecase.NewSaleUsecase(saleRepo, catRepo)
+	saleUc := usecase.NewSaleUsecase(saleRepo, catRepo, nil)
 
 	ctx := context.Background()
 

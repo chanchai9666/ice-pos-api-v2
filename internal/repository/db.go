@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"ice-pos-api-v2/config"
@@ -10,6 +11,7 @@ import (
 	"ice-pos-api-v2/internal/pkg/password"
 
 	"github.com/google/uuid"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -22,12 +24,35 @@ func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 	}
 
 	gormConfig := &gorm.Config{
-		Logger: gormlogger.Default.LogMode(logLevel),
+		Logger:      gormlogger.Default.LogMode(logLevel),
+		PrepareStmt: false,
 	}
 
-	db, err := gorm.Open(sqlite.Open(cfg.DBPath), gormConfig)
+	var dialector gorm.Dialector
+	dbType := strings.ToLower(cfg.DBType)
+
+	switch dbType {
+	case "postgres", "postgresql":
+		dsn := fmt.Sprintf(
+			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+			cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort, cfg.DBSSLMode,
+		)
+		if cfg.DBSchema != "" {
+			dsn = fmt.Sprintf("%s search_path=%s", dsn, cfg.DBSchema)
+		}
+		slog.Info("Connecting to PostgreSQL/Supabase database...", "host", cfg.DBHost, "port", cfg.DBPort, "dbname", cfg.DBName)
+		dialector = postgres.New(postgres.Config{
+			DSN:                  dsn,
+			PreferSimpleProtocol: true, // Disables prepared statements for Supabase PgBouncer (port 6543)
+		})
+	default:
+		slog.Info("Connecting to SQLite database...", "path", cfg.DBPath)
+		dialector = sqlite.Open(cfg.DBPath)
+	}
+
+	db, err := gorm.Open(dialector, gormConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		return nil, fmt.Errorf("failed to connect to database (%s): %w", dbType, err)
 	}
 
 	// Auto-migrate simplified schema
@@ -35,6 +60,9 @@ func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 		&domain.User{},
 		&domain.Category{},
 		&domain.Product{},
+		&domain.Customer{},
+		&domain.CreditAccount{},
+		&domain.CreditTransaction{},
 		&domain.Sale{},
 		&domain.SaleItem{},
 	)

@@ -12,17 +12,24 @@ import (
 func AuthMiddleware(jwtService *jwt.Service) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
-		if authHeader == "" {
+		tokenStr := ""
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenStr = parts[1]
+			}
+		}
+
+		if tokenStr == "" {
+			tokenStr = c.Cookies("access_token")
+		}
+
+		if tokenStr == "" {
 			return domain.ErrUnauthorized
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			return domain.ErrUnauthorized
-		}
-
-		claims, err := jwtService.ValidateToken(parts[1])
-		if err != nil {
+		claims, err := jwtService.ValidateToken(tokenStr)
+		if err != nil || claims.TokenType == "refresh" {
 			return domain.ErrUnauthorized
 		}
 
