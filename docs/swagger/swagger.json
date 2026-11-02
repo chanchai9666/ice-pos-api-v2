@@ -200,6 +200,212 @@
             }
           }
         }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "สร้างหมวดหมู่สินค้าใหม่ในระบบ (เฉพาะ Admin)",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Categories"],
+        "summary": "สร้างหมวดหมู่สินค้าใหม่",
+        "parameters": [
+          {
+            "description": "ข้อมูลหมวดหมู่ที่ต้องการสร้าง",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.CreateCategoryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.CategoryActionResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/categories/{id}": {
+      "get": {
+        "description": "ดึงรายละเอียดข้อมูลหมวดหมู่สินค้าตามรหัส ID",
+        "produces": ["application/json"],
+        "tags": ["Categories"],
+        "summary": "ดึงข้อมูลหมวดหมู่สินค้าตาม ID",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "รหัสหมวดหมู่ (Category ID / UUID)",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.CategoryDataResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "อัปเดตข้อมูลหมวดหมู่ เช่น ชื่อ หรือลำดับการแสดงผล (เฉพาะ Admin)",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Categories"],
+        "summary": "แก้ไขข้อมูลหมวดหมู่สินค้า",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "รหัสหมวดหมู่ (Category ID / UUID)",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "ข้อมูลหมวดหมู่ที่ต้องการแก้ไข",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.UpdateCategoryRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.CategoryActionResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "ลบหมวดหมู่สินค้าออกจากระบบ และปลดหมวดหมู่ออกจากสินค้าที่เคยผูกอยู่โดยอัตโนมัติ (เฉพาะ Admin)",
+        "produces": ["application/json"],
+        "tags": ["Categories"],
+        "summary": "ลบหมวดหมู่สินค้า",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "รหัสหมวดหมู่ (Category ID / UUID)",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.MessageResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
       }
     },
     "/customers": {
@@ -1917,6 +2123,34 @@
         }
       }
     },
+    "internal_delivery_http_handler.CategoryActionResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/ice-pos-api-v2_internal_domain.Category"
+        },
+        "message": {
+          "type": "string",
+          "example": "Category processed successfully"
+        },
+        "success": {
+          "type": "boolean",
+          "example": true
+        }
+      }
+    },
+    "internal_delivery_http_handler.CategoryDataResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/ice-pos-api-v2_internal_domain.Category"
+        },
+        "success": {
+          "type": "boolean",
+          "example": true
+        }
+      }
+    },
     "internal_delivery_http_handler.CategoryListDataResponse": {
       "type": "object",
       "properties": {
@@ -2000,6 +2234,20 @@
         "username": {
           "type": "string",
           "example": "cashier1"
+        }
+      }
+    },
+    "internal_delivery_http_handler.CreateCategoryRequest": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "เครื่องดื่ม"
+        },
+        "sort_order": {
+          "type": "integer",
+          "example": 1
         }
       }
     },
@@ -2299,6 +2547,20 @@
         "success": {
           "type": "boolean",
           "example": true
+        }
+      }
+    },
+    "internal_delivery_http_handler.UpdateCategoryRequest": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "เครื่องดื่มเย็น"
+        },
+        "sort_order": {
+          "type": "integer",
+          "example": 2
         }
       }
     },

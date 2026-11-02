@@ -82,6 +82,19 @@ type CategoryListDataResponse struct {
 	Data    []domain.Category `json:"data"`
 }
 
+// CategoryDataResponse represents a single category response
+type CategoryDataResponse struct {
+	Success bool             `json:"success" example:"true"`
+	Data    *domain.Category `json:"data"`
+}
+
+// CategoryActionResponse represents category action response (create/update)
+type CategoryActionResponse struct {
+	Success bool             `json:"success" example:"true"`
+	Message string           `json:"message" example:"Category processed successfully"`
+	Data    *domain.Category `json:"data"`
+}
+
 // CheckoutData represents sale and receipt generated at checkout
 type CheckoutData struct {
 	Sale    *domain.Sale    `json:"sale"`

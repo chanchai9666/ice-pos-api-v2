@@ -94,6 +94,10 @@ func SetupRoutes(rc *RouterConfig) {
 	categories := v1.Group("/categories")
 	{
 		categories.Get("", rc.CatalogHandler.ListCategories)
+		categories.Get("/:id", rc.CatalogHandler.GetCategoryByID)
+		categories.Post("", middleware.AuthMiddleware(rc.JWTService), middleware.RequireRoles(domain.RoleAdmin), rc.CatalogHandler.CreateCategory)
+		categories.Put("/:id", middleware.AuthMiddleware(rc.JWTService), middleware.RequireRoles(domain.RoleAdmin), rc.CatalogHandler.UpdateCategory)
+		categories.Delete("/:id", middleware.AuthMiddleware(rc.JWTService), middleware.RequireRoles(domain.RoleAdmin), rc.CatalogHandler.DeleteCategory)
 	}
 
 	// 5. Image Uploads

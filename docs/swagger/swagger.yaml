@@ -280,6 +280,25 @@ definitions:
         example: true
         type: boolean
     type: object
+  internal_delivery_http_handler.CategoryActionResponse:
+    properties:
+      data:
+        $ref: "#/definitions/ice-pos-api-v2_internal_domain.Category"
+      message:
+        example: Category processed successfully
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  internal_delivery_http_handler.CategoryDataResponse:
+    properties:
+      data:
+        $ref: "#/definitions/ice-pos-api-v2_internal_domain.Category"
+      success:
+        example: true
+        type: boolean
+    type: object
   internal_delivery_http_handler.CategoryListDataResponse:
     properties:
       data:
@@ -338,6 +357,17 @@ definitions:
       username:
         example: cashier1
         type: string
+    type: object
+  internal_delivery_http_handler.CreateCategoryRequest:
+    properties:
+      name:
+        example: เครื่องดื่ม
+        type: string
+      sort_order:
+        example: 1
+        type: integer
+    required:
+      - name
     type: object
   internal_delivery_http_handler.CreateCustomerRequest:
     properties:
@@ -544,6 +574,17 @@ definitions:
         example: true
         type: boolean
     type: object
+  internal_delivery_http_handler.UpdateCategoryRequest:
+    properties:
+      name:
+        example: เครื่องดื่มเย็น
+        type: string
+      sort_order:
+        example: 2
+        type: integer
+    required:
+      - name
+    type: object
   internal_delivery_http_handler.UpdateCustomerRequest:
     properties:
       email:
@@ -735,6 +776,154 @@ paths:
           schema:
             $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
       summary: รายการหมวดหมู่สินค้าทั้งหมด
+      tags:
+        - Categories
+    post:
+      consumes:
+        - application/json
+      description: สร้างหมวดหมู่สินค้าใหม่ในระบบ (เฉพาะ Admin)
+      parameters:
+        - description: ข้อมูลหมวดหมู่ที่ต้องการสร้าง
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.CreateCategoryRequest"
+      produces:
+        - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.CategoryActionResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "403":
+          description: Forbidden
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "409":
+          description: Conflict
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: สร้างหมวดหมู่สินค้าใหม่
+      tags:
+        - Categories
+  /categories/{id}:
+    delete:
+      description:
+        ลบหมวดหมู่สินค้าออกจากระบบ และปลดหมวดหมู่ออกจากสินค้าที่เคยผูกอยู่โดยอัตโนมัติ
+        (เฉพาะ Admin)
+      parameters:
+        - description: รหัสหมวดหมู่ (Category ID / UUID)
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.MessageResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "403":
+          description: Forbidden
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: ลบหมวดหมู่สินค้า
+      tags:
+        - Categories
+    get:
+      description: ดึงรายละเอียดข้อมูลหมวดหมู่สินค้าตามรหัส ID
+      parameters:
+        - description: รหัสหมวดหมู่ (Category ID / UUID)
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.CategoryDataResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      summary: ดึงข้อมูลหมวดหมู่สินค้าตาม ID
+      tags:
+        - Categories
+    put:
+      consumes:
+        - application/json
+      description: อัปเดตข้อมูลหมวดหมู่ เช่น ชื่อ หรือลำดับการแสดงผล (เฉพาะ Admin)
+      parameters:
+        - description: รหัสหมวดหมู่ (Category ID / UUID)
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: ข้อมูลหมวดหมู่ที่ต้องการแก้ไข
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.UpdateCategoryRequest"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.CategoryActionResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "403":
+          description: Forbidden
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "409":
+          description: Conflict
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: แก้ไขข้อมูลหมวดหมู่สินค้า
       tags:
         - Categories
   /customers:

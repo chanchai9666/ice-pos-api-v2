@@ -181,3 +181,134 @@ func (h *CatalogHandler) ListCategories(c fiber.Ctx) error {
 		"data":    cats,
 	})
 }
+
+// GetCategoryByID godoc
+// @Summary      ดึงข้อมูลหมวดหมู่สินค้าตาม ID
+// @Description  ดึงรายละเอียดข้อมูลหมวดหมู่สินค้าตามรหัส ID
+// @Tags         Categories
+// @Produce      json
+// @Param        id   path      string true "รหัสหมวดหมู่ (Category ID / UUID)"
+// @Success      200  {object}  CategoryDataResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /categories/{id} [get]
+func (h *CatalogHandler) GetCategoryByID(c fiber.Ctx) error {
+	id := c.Params("id")
+	cat, err := h.catalogUsecase.GetCategoryByID(c.Context(), id)
+	if err != nil {
+		return err
+	}
+	return c.JSON(fiber.Map{
+		"success": true,
+		"data":    cat,
+	})
+}
+
+// CreateCategoryRequest represents request payload for creating category
+type CreateCategoryRequest struct {
+	Name      string `json:"name" example:"เครื่องดื่ม" validate:"required"`
+	SortOrder int    `json:"sort_order" example:"1"`
+}
+
+// CreateCategory godoc
+// @Summary      สร้างหมวดหมู่สินค้าใหม่
+// @Description  สร้างหมวดหมู่สินค้าใหม่ในระบบ (เฉพาะ Admin)
+// @Tags         Categories
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request body CreateCategoryRequest true "ข้อมูลหมวดหมู่ที่ต้องการสร้าง"
+// @Success      201 {object} CategoryActionResponse
+// @Failure      400 {object} ErrorResponse
+// @Failure      401 {object} ErrorResponse
+// @Failure      403 {object} ErrorResponse
+// @Failure      409 {object} ErrorResponse
+// @Router       /categories [post]
+func (h *CatalogHandler) CreateCategory(c fiber.Ctx) error {
+	var req CreateCategoryRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return domain.ErrBadRequest
+	}
+
+	cat, err := h.catalogUsecase.CreateCategory(c.Context(), domain.CreateCategoryInput{
+		Name:      req.Name,
+		SortOrder: req.SortOrder,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"success": true,
+		"message": "สร้างหมวดหมู่สินค้าเรียบร้อยแล้ว",
+		"data":    cat,
+	})
+}
+
+// UpdateCategoryRequest represents request payload for updating category
+type UpdateCategoryRequest struct {
+	Name      string `json:"name" example:"เครื่องดื่มเย็น" validate:"required"`
+	SortOrder *int   `json:"sort_order" example:"2"`
+}
+
+// UpdateCategory godoc
+// @Summary      แก้ไขข้อมูลหมวดหมู่สินค้า
+// @Description  อัปเดตข้อมูลหมวดหมู่ เช่น ชื่อ หรือลำดับการแสดงผล (เฉพาะ Admin)
+// @Tags         Categories
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id      path string true "รหัสหมวดหมู่ (Category ID / UUID)"
+// @Param        request body UpdateCategoryRequest true "ข้อมูลหมวดหมู่ที่ต้องการแก้ไข"
+// @Success      200 {object} CategoryActionResponse
+// @Failure      400 {object} ErrorResponse
+// @Failure      401 {object} ErrorResponse
+// @Failure      403 {object} ErrorResponse
+// @Failure      404 {object} ErrorResponse
+// @Failure      409 {object} ErrorResponse
+// @Router       /categories/{id} [put]
+func (h *CatalogHandler) UpdateCategory(c fiber.Ctx) error {
+	id := c.Params("id")
+	var req UpdateCategoryRequest
+	if err := c.Bind().JSON(&req); err != nil {
+		return domain.ErrBadRequest
+	}
+
+	cat, err := h.catalogUsecase.UpdateCategory(c.Context(), id, domain.UpdateCategoryInput{
+		Name:      req.Name,
+		SortOrder: req.SortOrder,
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "อัปเดตข้อมูลหมวดหมู่สินค้าเรียบร้อยแล้ว",
+		"data":    cat,
+	})
+}
+
+// DeleteCategory godoc
+// @Summary      ลบหมวดหมู่สินค้า
+// @Description  ลบหมวดหมู่สินค้าออกจากระบบ และปลดหมวดหมู่ออกจากสินค้าที่เคยผูกอยู่โดยอัตโนมัติ (เฉพาะ Admin)
+// @Tags         Categories
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "รหัสหมวดหมู่ (Category ID / UUID)"
+// @Success      200 {object} MessageResponse
+// @Failure      400 {object} ErrorResponse
+// @Failure      401 {object} ErrorResponse
+// @Failure      403 {object} ErrorResponse
+// @Failure      404 {object} ErrorResponse
+// @Router       /categories/{id} [delete]
+func (h *CatalogHandler) DeleteCategory(c fiber.Ctx) error {
+	id := c.Params("id")
+	if err := h.catalogUsecase.DeleteCategory(c.Context(), id); err != nil {
+		return err
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "ลบหมวดหมู่สินค้าเรียบร้อยแล้ว",
+	})
+}
