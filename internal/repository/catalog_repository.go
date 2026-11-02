@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"ice-pos-api-v2/internal/domain"
 
@@ -30,8 +31,32 @@ func (r *catalogRepository) GetProductByID(ctx context.Context, id string) (*dom
 }
 
 func (r *catalogRepository) GetProductByBarcode(ctx context.Context, barcode string) (*domain.Product, error) {
+	trimmed := strings.TrimSpace(barcode)
+	if trimmed == "" {
+		return nil, domain.ErrNotFound
+	}
 	var prod domain.Product
-	err := r.db.WithContext(ctx).Preload("Category").First(&prod, "barcode = ? AND is_active = ?", barcode, true).Error
+	err := r.db.WithContext(ctx).Preload("Category").First(&prod, "barcode = ? AND is_active = ?", trimmed, true).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+	return &prod, nil
+}
+
+func (r *catalogRepository) GetProductByBarcodeExcludeID(ctx context.Context, barcode, excludeID string) (*domain.Product, error) {
+	trimmed := strings.TrimSpace(barcode)
+	if trimmed == "" {
+		return nil, domain.ErrNotFound
+	}
+	var prod domain.Product
+	query := r.db.WithContext(ctx).Where("barcode = ? AND is_active = ?", trimmed, true)
+	if excludeID != "" {
+		query = query.Where("id != ?", excludeID)
+	}
+	err := query.First(&prod).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound
@@ -59,9 +84,12 @@ func (r *catalogRepository) GetProductsByIDs(ctx context.Context, ids []string) 
 	return products, err
 }
 
-func (r *catalogRepository) ListProducts(ctx context.Context, search, categoryID string, limit, offset int) ([]domain.Product, int64, error) {
+func (r *catalogRepository) ListProducts(ctx context.Context, search, categoryID, barcode string, limit, offset int) ([]domain.Product, int64, error) {
 	query := r.db.WithContext(ctx).Model(&domain.Product{}).Where("is_active = ?", true)
 
+	if barcode != "" {
+		query = query.Where("barcode = ?", strings.TrimSpace(barcode))
+	}
 	if search != "" {
 		likeTerm := "%" + search + "%"
 		query = query.Where("name LIKE ? OR code LIKE ? OR barcode LIKE ?", likeTerm, likeTerm, likeTerm)

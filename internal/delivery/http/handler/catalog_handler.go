@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"net/url"
 	"strconv"
+	"strings"
 
 	"ice-pos-api-v2/internal/domain"
 
@@ -18,10 +20,11 @@ func NewCatalogHandler(catalogUsecase domain.CatalogUsecase) *CatalogHandler {
 
 // ListProducts godoc
 // @Summary      รายการสินค้าทั้งหมด
-// @Description  ค้นหาและแสดงรายการสินค้าในแคตตาล็อก พร้อมตัวกรองตามหมวดหมู่และการแบ่งหน้า (Pagination)
+// @Description  ค้นหาและแสดงรายการสินค้าในแคตตาล็อก พร้อมตัวกรองตามหมวดหมู่และการแบ่งหน้า (Pagination) หรือค้นหาตรงตามบาร์โค้ด
 // @Tags         Products
 // @Produce      json
 // @Param        search      query string false "ค้นหาตามชื่อสินค้าหรือรหัสสินค้า/บาร์โค้ด"
+// @Param        barcode     query string false "ค้นหาตรงตามรหัสบาร์โค้ด (Exact Match)"
 // @Param        category_id query string false "กรองตามรหัสหมวดหมู่ (Category ID)"
 // @Param        limit       query int    false "จำนวนรายการสูงสุดต่อหน้า (ค่าเริ่มต้น 50)"
 // @Param        offset      query int    false "ตำแหน่งเริ่มต้น (ค่าเริ่มต้น 0)"
@@ -30,11 +33,12 @@ func NewCatalogHandler(catalogUsecase domain.CatalogUsecase) *CatalogHandler {
 // @Router       /products [get]
 func (h *CatalogHandler) ListProducts(c fiber.Ctx) error {
 	search := c.Query("search")
+	barcode := c.Query("barcode")
 	categoryID := c.Query("category_id")
 	limit, _ := strconv.Atoi(c.Query("limit", "50"))
 	offset, _ := strconv.Atoi(c.Query("offset", "0"))
 
-	products, total, err := h.catalogUsecase.SearchProducts(c.Context(), search, categoryID, limit, offset)
+	products, total, err := h.catalogUsecase.SearchProducts(c.Context(), search, categoryID, barcode, limit, offset)
 	if err != nil {
 		return err
 	}
@@ -69,15 +73,24 @@ func (h *CatalogHandler) GetProductByID(c fiber.Ctx) error {
 
 // GetProductByBarcode godoc
 // @Summary      ค้นหาสินค้าด้วยบาร์โค้ด
-// @Description  ค้นหาข้อมูลสินค้าอย่างรวดเร็วด้วยรหัสบาร์โค้ด สำหรับการยิงสแกนขายหน้าร้าน
+// @Description  ค้นหาข้อมูลสินค้าอย่างรวดเร็วด้วยรหัสบาร์โค้ด สำหรับการสแกนด้วยกล้องหรือบาร์โค้ดสแกนเนอร์
 // @Tags         Products
 // @Produce      json
 // @Param        barcode path string true "รหัสบาร์โค้ดสินค้า (Barcode)"
 // @Success      200 {object} ProductDataResponse
+// @Failure      400 {object} ErrorResponse
 // @Failure      404 {object} ErrorResponse
 // @Router       /products/barcode/{barcode} [get]
 func (h *CatalogHandler) GetProductByBarcode(c fiber.Ctx) error {
-	barcode := c.Params("barcode")
+	rawBarcode := c.Params("barcode")
+	decoded, err := url.PathUnescape(rawBarcode)
+	if err != nil {
+		decoded = rawBarcode
+	}
+	barcode := strings.TrimSpace(decoded)
+	if barcode == "" {
+		return domain.ErrBadRequest
+	}
 	prod, err := h.catalogUsecase.GetProductByBarcode(c.Context(), barcode)
 	if err != nil {
 		return err
@@ -112,6 +125,39 @@ func (h *CatalogHandler) CreateProduct(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"success": true,
+		"data":    prod,
+	})
+}
+
+// UpdateProduct godoc
+// @Summary      แก้ไขข้อมูลสินค้า
+// @Description  อัปเดตข้อมูลสินค้า เช่น ชื่อ ราคา หรือรหัสบาร์โค้ด (เฉพาะ Admin)
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id      path string true "รหัสสินค้า (Product ID / UUID)"
+// @Param        request body domain.Product true "ข้อมูลสินค้าที่ต้องการแก้ไข"
+// @Success      200 {object} ProductDataResponse
+// @Failure      400 {object} ErrorResponse
+// @Failure      401 {object} ErrorResponse
+// @Failure      403 {object} ErrorResponse
+// @Failure      404 {object} ErrorResponse
+// @Router       /products/{id} [put]
+func (h *CatalogHandler) UpdateProduct(c fiber.Ctx) error {
+	id := c.Params("id")
+	var prod domain.Product
+	if err := c.Bind().JSON(&prod); err != nil {
+		return domain.ErrBadRequest
+	}
+	prod.ID = id
+
+	if err := h.catalogUsecase.UpdateProduct(c.Context(), &prod); err != nil {
+		return err
+	}
+
+	return c.JSON(fiber.Map{
 		"success": true,
 		"data":    prod,
 	})

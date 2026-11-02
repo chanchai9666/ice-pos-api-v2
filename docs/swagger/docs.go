@@ -704,7 +704,7 @@ const docTemplate = `{
         },
         "/products": {
             "get": {
-                "description": "ค้นหาและแสดงรายการสินค้าในแคตตาล็อก พร้อมตัวกรองตามหมวดหมู่และการแบ่งหน้า (Pagination)",
+                "description": "ค้นหาและแสดงรายการสินค้าในแคตตาล็อก พร้อมตัวกรองตามหมวดหมู่และการแบ่งหน้า (Pagination) หรือค้นหาตรงตามบาร์โค้ด",
                 "produces": [
                     "application/json"
                 ],
@@ -717,6 +717,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "ค้นหาตามชื่อสินค้าหรือรหัสสินค้า/บาร์โค้ด",
                         "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ค้นหาตรงตามรหัสบาร์โค้ด (Exact Match)",
+                        "name": "barcode",
                         "in": "query"
                     },
                     {
@@ -811,7 +817,7 @@ const docTemplate = `{
         },
         "/products/barcode/{barcode}": {
             "get": {
-                "description": "ค้นหาข้อมูลสินค้าอย่างรวดเร็วด้วยรหัสบาร์โค้ด สำหรับการยิงสแกนขายหน้าร้าน",
+                "description": "ค้นหาข้อมูลสินค้าอย่างรวดเร็วด้วยรหัสบาร์โค้ด สำหรับการสแกนด้วยกล้องหรือบาร์โค้ดสแกนเนอร์",
                 "produces": [
                     "application/json"
                 ],
@@ -833,6 +839,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_delivery_http_handler.ProductDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
                         }
                     },
                     "404": {
@@ -868,6 +880,74 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_delivery_http_handler.ProductDataResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "อัปเดตข้อมูลสินค้า เช่น ชื่อ ราคา หรือรหัสบาร์โค้ด (เฉพาะ Admin)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "แก้ไขข้อมูลสินค้า",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "รหัสสินค้า (Product ID / UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ข้อมูลสินค้าที่ต้องการแก้ไข",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ice-pos-api-v2_internal_domain.Product"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http_handler.ProductDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
                         }
                     },
                     "404": {

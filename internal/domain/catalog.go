@@ -31,9 +31,10 @@ type Product struct {
 type CatalogRepository interface {
 	GetProductByID(ctx context.Context, id string) (*Product, error)
 	GetProductByBarcode(ctx context.Context, barcode string) (*Product, error)
+	GetProductByBarcodeExcludeID(ctx context.Context, barcode, excludeID string) (*Product, error)
 	GetProductByCode(ctx context.Context, code string) (*Product, error)
 	GetProductsByIDs(ctx context.Context, ids []string) ([]Product, error)
-	ListProducts(ctx context.Context, search, categoryID string, limit, offset int) ([]Product, int64, error)
+	ListProducts(ctx context.Context, search, categoryID, barcode string, limit, offset int) ([]Product, int64, error)
 	CreateProduct(ctx context.Context, product *Product) error
 	UpdateProduct(ctx context.Context, product *Product) error
 
@@ -45,7 +46,7 @@ type CatalogRepository interface {
 type CatalogUsecase interface {
 	GetProductByID(ctx context.Context, id string) (*Product, error)
 	GetProductByBarcode(ctx context.Context, barcode string) (*Product, error)
-	SearchProducts(ctx context.Context, search, categoryID string, limit, offset int) ([]Product, int64, error)
+	SearchProducts(ctx context.Context, search, categoryID, barcode string, limit, offset int) ([]Product, int64, error)
 	CreateProduct(ctx context.Context, product *Product) error
 	UpdateProduct(ctx context.Context, product *Product) error
 

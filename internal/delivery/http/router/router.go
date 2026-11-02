@@ -85,6 +85,7 @@ func SetupRoutes(rc *RouterConfig) {
 		products.Get("/barcode/:barcode", rc.CatalogHandler.GetProductByBarcode)
 		products.Get("/:id", rc.CatalogHandler.GetProductByID)
 		products.Post("", middleware.AuthMiddleware(rc.JWTService), middleware.RequireRoles(domain.RoleAdmin), rc.CatalogHandler.CreateProduct)
+		products.Put("/:id", middleware.AuthMiddleware(rc.JWTService), middleware.RequireRoles(domain.RoleAdmin), rc.CatalogHandler.UpdateProduct)
 		if rc.UploadHandler != nil {
 			products.Post("/:id/image", middleware.AuthMiddleware(rc.JWTService), rc.UploadHandler.UploadProductImage)
 		}

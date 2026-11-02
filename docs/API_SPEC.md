@@ -133,16 +133,51 @@
 ### 4.1 รายการสินค้าทั้งหมด
 
 - **URL:** `GET /api/v1/products?limit=50&offset=0&search=น้ำดื่ม`
+- **Query Parameters:**
+  - `search`: ค้นหาตามชื่อสินค้า รหัสสินค้า หรือบาร์โค้ด (LIKE wildcard)
+  - `barcode`: ค้นหาตรงตามบาร์โค้ด (Exact Match)
+  - `category_id`: กรองตามหมวดหมู่
+  - `limit`: จำนวนรายการต่อหน้า (ค่าเริ่มต้น 50)
+  - `offset`: ลำดับเริ่มต้น
 - **Response 200:** รายการสินค้า ราคาขาย ต้นทุน บาร์โค้ด และรูปภาพ
 
-### 4.2 ค้นหาสินค้าด้วยบาร์โค้ด
+### 4.2 ค้นหาสินค้าด้วยบาร์โค้ด (สำหรับการสแกนด้วยกล้อง)
 
 - **URL:** `GET /api/v1/products/barcode/:barcode`
-- **Response 200:** ข้อมูลสินค้าที่ตรงกับบาร์โค้ดทันที
+- **คำอธิบาย:** ค้นหาสินค้าอย่างรวดเร็วด้วยรหัสบาร์โค้ด (Exact Match เฉพาะบาร์โค้ด) รองรับการถอดรหัส URL และตัดช่องว่าง (Trim Whitespace)
+- **Response 200 (Success):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "code": "P001",
+      "barcode": "885000000001",
+      "name": "น้ำดื่ม 600ml",
+      "price": 1000,
+      "cost_price": 600,
+      "category_id": "category-uuid",
+      "category": { "id": "category-uuid", "name": "สินค้าทั่วไป" },
+      "image_url": "",
+      "is_active": true
+    }
+  }
+  ```
+- **Response 404 (Not Found):**
+  ```json
+  {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "Record not found"
+    }
+  }
+  ```
 
 ### 4.3 สร้างสินค้าใหม่ (Admin)
 
 - **URL:** `POST /api/v1/products`
+- **Header:** `Authorization: Bearer <admin_token>`
+- **คำอธิบาย:** เพิ่มสินค้าใหม่ หากระบุ `barcode` จะตรวจสอบความซ้ำซ้อนในระบบ หากซ้ำจะคืนค่า 400 Bad Request
 - **Request Body:**
   ```json
   {
@@ -156,13 +191,28 @@
   }
   ```
 
-### 4.4 อัปโหลดรูปภาพผูกกับสินค้าโดยตรง
+### 4.4 แก้ไขข้อมูลสินค้าและลงทะเบียนบาร์โค้ด (Admin)
+
+- **URL:** `PUT /api/v1/products/:id`
+- **Header:** `Authorization: Bearer <admin_token>`
+- **คำอธิบาย:** แก้ไขข้อมูลสินค้า เช่น ชื่อ ราคา หรือผูกรหัสบาร์โค้ดใหม่ โดยระบบจะตรวจสอบไม่ให้บาร์โค้ดซ้ำกับสินค้าอื่น
+- **Request Body:**
+  ```json
+  {
+    "name": "ชาเขียวพร้อมดื่ม รสหวานน้อย",
+    "barcode": "885000000003",
+    "price": 2200
+  }
+  ```
+- **Response 200 (Success):** ข้อมูลสินค้าที่ได้รับการปรับปรุง
+
+### 4.5 อัปโหลดรูปภาพผูกกับสินค้าโดยตรง
 
 - **URL:** `POST /api/v1/products/:id/image`
 - **Content-Type:** `multipart/form-data` (Field: `file`)
 - **คำอธิบาย:** บีบอัดภาพเป็น WebP <= 50KB และบันทึก `image_url` ในตัวสินค้า
 
-### 4.5 ดึงหมวดหมู่สินค้า
+### 4.6 ดึงหมวดหมู่สินค้า
 
 - **URL:** `GET /api/v1/categories`
 
