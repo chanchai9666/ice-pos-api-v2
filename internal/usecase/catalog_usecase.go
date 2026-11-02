@@ -105,11 +105,30 @@ func (u *catalogUsecase) ListCategories(ctx context.Context) ([]domain.Category,
 	return u.catalogRepo.ListCategories(ctx)
 }
 
-func (u *catalogUsecase) CreateCategory(ctx context.Context, name string, sortOrder int) (*domain.Category, error) {
+func (u *catalogUsecase) GetCategoryByID(ctx context.Context, id string) (*domain.Category, error) {
+	trimmedID := strings.TrimSpace(id)
+	if trimmedID == "" {
+		return nil, domain.ErrBadRequest
+	}
+	return u.catalogRepo.GetCategoryByID(ctx, trimmedID)
+}
+
+func (u *catalogUsecase) CreateCategory(ctx context.Context, input domain.CreateCategoryInput) (*domain.Category, error) {
+	trimmedName := strings.TrimSpace(input.Name)
+	if trimmedName == "" || len(trimmedName) > 100 {
+		return nil, domain.NewAppError(400, "ชื่อหมวดหมู่ต้องมีความยาวระหว่าง 1 ถึง 100 ตัวอักษร")
+	}
+
+	// Check unique name
+	existing, err := u.catalogRepo.GetCategoryByName(ctx, trimmedName)
+	if err == nil && existing != nil {
+		return nil, domain.NewAppError(409, "ชื่อหมวดหมู่นี้มีอยู่ในระบบแล้ว")
+	}
+
 	cat := &domain.Category{
 		ID:        uuid.New().String(),
-		Name:      name,
-		SortOrder: sortOrder,
+		Name:      trimmedName,
+		SortOrder: input.SortOrder,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -117,4 +136,54 @@ func (u *catalogUsecase) CreateCategory(ctx context.Context, name string, sortOr
 		return nil, err
 	}
 	return cat, nil
+}
+
+func (u *catalogUsecase) UpdateCategory(ctx context.Context, id string, input domain.UpdateCategoryInput) (*domain.Category, error) {
+	trimmedID := strings.TrimSpace(id)
+	if trimmedID == "" {
+		return nil, domain.ErrBadRequest
+	}
+
+	cat, err := u.catalogRepo.GetCategoryByID(ctx, trimmedID)
+	if err != nil {
+		return nil, err
+	}
+
+	trimmedName := strings.TrimSpace(input.Name)
+	if trimmedName == "" || len(trimmedName) > 100 {
+		return nil, domain.NewAppError(400, "ชื่อหมวดหมู่ต้องมีความยาวระหว่าง 1 ถึง 100 ตัวอักษร")
+	}
+
+	// If name changed, check uniqueness excluding current category
+	if !strings.EqualFold(trimmedName, cat.Name) {
+		existing, err := u.catalogRepo.GetCategoryByName(ctx, trimmedName)
+		if err == nil && existing != nil && existing.ID != cat.ID {
+			return nil, domain.NewAppError(409, "ชื่อหมวดหมู่นี้มีอยู่ในระบบแล้ว")
+		}
+	}
+
+	cat.Name = trimmedName
+	if input.SortOrder != nil {
+		cat.SortOrder = *input.SortOrder
+	}
+	cat.UpdatedAt = time.Now()
+
+	if err := u.catalogRepo.UpdateCategory(ctx, cat); err != nil {
+		return nil, err
+	}
+	return cat, nil
+}
+
+func (u *catalogUsecase) DeleteCategory(ctx context.Context, id string) error {
+	trimmedID := strings.TrimSpace(id)
+	if trimmedID == "" {
+		return domain.ErrBadRequest
+	}
+
+	// Verify category exists first
+	if _, err := u.catalogRepo.GetCategoryByID(ctx, trimmedID); err != nil {
+		return err
+	}
+
+	return u.catalogRepo.DeleteCategory(ctx, trimmedID)
 }

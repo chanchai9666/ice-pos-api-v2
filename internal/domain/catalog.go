@@ -46,6 +46,16 @@ type CatalogRepository interface {
 	DeleteCategory(ctx context.Context, id string) error
 }
 
+type CreateCategoryInput struct {
+	Name      string `json:"name" validate:"required,min=1,max=100"`
+	SortOrder int    `json:"sort_order"`
+}
+
+type UpdateCategoryInput struct {
+	Name      string `json:"name" validate:"required,min=1,max=100"`
+	SortOrder *int   `json:"sort_order"`
+}
+
 type CatalogUsecase interface {
 	GetProductByID(ctx context.Context, id string) (*Product, error)
 	GetProductByBarcode(ctx context.Context, barcode string) (*Product, error)
@@ -54,5 +64,8 @@ type CatalogUsecase interface {
 	UpdateProduct(ctx context.Context, product *Product) error
 
 	ListCategories(ctx context.Context) ([]Category, error)
-	CreateCategory(ctx context.Context, name string, sortOrder int) (*Category, error)
+	GetCategoryByID(ctx context.Context, id string) (*Category, error)
+	CreateCategory(ctx context.Context, input CreateCategoryInput) (*Category, error)
+	UpdateCategory(ctx context.Context, id string, input UpdateCategoryInput) (*Category, error)
+	DeleteCategory(ctx context.Context, id string) error
 }

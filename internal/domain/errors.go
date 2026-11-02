@@ -24,5 +24,6 @@ var (
 	ErrUnauthorized   = NewAppError(401, "Unauthorized")
 	ErrForbidden      = NewAppError(403, "Forbidden")
 	ErrBadRequest     = NewAppError(400, "Bad request")
+	ErrConflict       = NewAppError(409, "Conflict")
 	ErrInternalServer = NewAppError(500, "Internal server error")
 )
