@@ -12,14 +12,8 @@ func CustomErrorHandler(c fiber.Ctx, err error) error {
 	var appErr *domain.AppError
 	if errors.As(err, &appErr) {
 		status := fiber.StatusBadRequest
-		if appErr.Code == 401 {
-			status = fiber.StatusUnauthorized
-		} else if appErr.Code == 403 {
-			status = fiber.StatusForbidden
-		} else if appErr.Code == 404 {
-			status = fiber.StatusNotFound
-		} else if appErr.Code >= 500 {
-			status = fiber.StatusInternalServerError
+		if appErr.Code >= 400 && appErr.Code < 600 {
+			status = appErr.Code
 		}
 		return c.Status(status).JSON(fiber.Map{
 			"success": false,
