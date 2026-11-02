@@ -40,7 +40,10 @@ type CatalogRepository interface {
 
 	ListCategories(ctx context.Context) ([]Category, error)
 	GetCategoryByID(ctx context.Context, id string) (*Category, error)
+	GetCategoryByName(ctx context.Context, name string) (*Category, error)
 	CreateCategory(ctx context.Context, category *Category) error
+	UpdateCategory(ctx context.Context, category *Category) error
+	DeleteCategory(ctx context.Context, id string) error
 }
 
 type CatalogUsecase interface {

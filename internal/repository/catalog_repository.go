@@ -137,3 +137,38 @@ func (r *catalogRepository) GetCategoryByID(ctx context.Context, id string) (*do
 func (r *catalogRepository) CreateCategory(ctx context.Context, category *domain.Category) error {
 	return r.db.WithContext(ctx).Create(category).Error
 }
+
+func (r *catalogRepository) GetCategoryByName(ctx context.Context, name string) (*domain.Category, error) {
+	var cat domain.Category
+	trimmed := strings.TrimSpace(name)
+	err := r.db.WithContext(ctx).Where("LOWER(TRIM(name)) = LOWER(?)", trimmed).First(&cat).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+	return &cat, nil
+}
+
+func (r *catalogRepository) UpdateCategory(ctx context.Context, category *domain.Category) error {
+	return r.db.WithContext(ctx).Save(category).Error
+}
+
+func (r *catalogRepository) DeleteCategory(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Unlink any products currently referencing this category
+		if err := tx.Model(&domain.Product{}).Where("category_id = ?", id).Update("category_id", "").Error; err != nil {
+			return err
+		}
+		// 2. Delete the category record
+		res := tx.Delete(&domain.Category{}, "id = ?", id)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return domain.ErrNotFound
+		}
+		return nil
+	})
+}
