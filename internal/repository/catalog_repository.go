@@ -140,8 +140,8 @@ func (r *catalogRepository) CreateCategory(ctx context.Context, category *domain
 
 func (r *catalogRepository) GetCategoryByName(ctx context.Context, name string) (*domain.Category, error) {
 	var cat domain.Category
-	trimmed := strings.TrimSpace(name)
-	err := r.db.WithContext(ctx).Where("LOWER(TRIM(name)) = LOWER(?)", trimmed).First(&cat).Error
+	trimmedLower := strings.ToLower(strings.TrimSpace(name))
+	err := r.db.WithContext(ctx).Where("LOWER(TRIM(name)) = ?", trimmedLower).First(&cat).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound

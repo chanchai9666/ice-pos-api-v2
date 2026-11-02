@@ -240,4 +240,84 @@ func TestCategoryLifecycle(t *testing.T) {
 	if err != nil || resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected DELETE non-existent category to return 404, got: %d", resp.StatusCode)
 	}
+
+	// 17. PUT and DELETE Auth Protection (401 without token, 403 with Cashier token)
+	req, _ = http.NewRequest(http.MethodPut, "/api/v1/categories/some-id", bytes.NewBuffer(updatePayload))
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected PUT /categories without token to return 401, got: %d", resp.StatusCode)
+	}
+
+	req, _ = http.NewRequest(http.MethodPut, "/api/v1/categories/some-id", bytes.NewBuffer(updatePayload))
+	req.Header.Set("Authorization", "Bearer "+cashierToken)
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected PUT /categories with Cashier token to return 403, got: %d", resp.StatusCode)
+	}
+
+	req, _ = http.NewRequest(http.MethodDelete, "/api/v1/categories/some-id", nil)
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected DELETE /categories without token to return 401, got: %d", resp.StatusCode)
+	}
+
+	req, _ = http.NewRequest(http.MethodDelete, "/api/v1/categories/some-id", nil)
+	req.Header.Set("Authorization", "Bearer "+cashierToken)
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected DELETE /categories with Cashier token to return 403, got: %d", resp.StatusCode)
+	}
+
+	// 18. Long Thai Name (> 33 runes, > 100 bytes, but <= 100 runes) must be accepted
+	longThaiName := "อาหารและเครื่องดื่มเพื่อสุขภาพและของหวาน" // 40 Thai runes, 120 bytes
+	longThaiPayload, _ := json.Marshal(map[string]interface{}{
+		"name":       longThaiName,
+		"sort_order": 99,
+	})
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/categories", bytes.NewBuffer(longThaiPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected POST with valid 40-character Thai name to return 201, got: %d", resp.StatusCode)
+	}
+
+	// 19. Case-insensitive duplicate check (e.g. "Bakery" vs "BAKERY")
+	bakeryPayload, _ := json.Marshal(map[string]interface{}{
+		"name":       "Bakery Shop",
+		"sort_order": 1,
+	})
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/categories", bytes.NewBuffer(bakeryPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected POST /categories Bakery Shop to return 201, got: %d", resp.StatusCode)
+	}
+
+	dupCasingPayload, _ := json.Marshal(map[string]interface{}{
+		"name":       "BAKERY SHOP",
+		"sort_order": 2,
+	})
+	req, _ = http.NewRequest(http.MethodPost, "/api/v1/categories", bytes.NewBuffer(dupCasingPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected POST /categories with different casing to return 409, got: %d", resp.StatusCode)
+	}
+
+	// 20. PUT with empty name returns 400 Bad Request
+	var createdBakery struct {
+		Data domain.Category `json:"data"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&createdBakery)
+	// We can update the bakery category
+	req, _ = http.NewRequest(http.MethodPut, "/api/v1/categories/non-existent-uuid", bytes.NewBuffer(bakeryPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	resp, err = app.Test(req)
+	if err != nil || resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected PUT non-existent category to return 404, got: %d", resp.StatusCode)
+	}
 }

@@ -2,8 +2,10 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"ice-pos-api-v2/internal/domain"
 
@@ -115,7 +117,7 @@ func (u *catalogUsecase) GetCategoryByID(ctx context.Context, id string) (*domai
 
 func (u *catalogUsecase) CreateCategory(ctx context.Context, input domain.CreateCategoryInput) (*domain.Category, error) {
 	trimmedName := strings.TrimSpace(input.Name)
-	if trimmedName == "" || len(trimmedName) > 100 {
+	if trimmedName == "" || utf8.RuneCountInString(trimmedName) > 100 {
 		return nil, domain.NewAppError(400, "ชื่อหมวดหมู่ต้องมีความยาวระหว่าง 1 ถึง 100 ตัวอักษร")
 	}
 
@@ -123,6 +125,8 @@ func (u *catalogUsecase) CreateCategory(ctx context.Context, input domain.Create
 	existing, err := u.catalogRepo.GetCategoryByName(ctx, trimmedName)
 	if err == nil && existing != nil {
 		return nil, domain.NewAppError(409, "ชื่อหมวดหมู่นี้มีอยู่ในระบบแล้ว")
+	} else if err != nil && !errors.Is(err, domain.ErrNotFound) {
+		return nil, err
 	}
 
 	cat := &domain.Category{
@@ -150,7 +154,7 @@ func (u *catalogUsecase) UpdateCategory(ctx context.Context, id string, input do
 	}
 
 	trimmedName := strings.TrimSpace(input.Name)
-	if trimmedName == "" || len(trimmedName) > 100 {
+	if trimmedName == "" || utf8.RuneCountInString(trimmedName) > 100 {
 		return nil, domain.NewAppError(400, "ชื่อหมวดหมู่ต้องมีความยาวระหว่าง 1 ถึง 100 ตัวอักษร")
 	}
 
@@ -159,6 +163,8 @@ func (u *catalogUsecase) UpdateCategory(ctx context.Context, id string, input do
 		existing, err := u.catalogRepo.GetCategoryByName(ctx, trimmedName)
 		if err == nil && existing != nil && existing.ID != cat.ID {
 			return nil, domain.NewAppError(409, "ชื่อหมวดหมู่นี้มีอยู่ในระบบแล้ว")
+		} else if err != nil && !errors.Is(err, domain.ErrNotFound) {
+			return nil, err
 		}
 	}
 

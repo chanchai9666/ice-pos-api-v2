@@ -7,8 +7,8 @@ import (
 
 type Category struct {
 	ID        string    `json:"id" gorm:"primaryKey;size:36"`
-	Name      string    `json:"name" gorm:"size:100;not null"`
-	SortOrder int       `json:"sort_order" gorm:"default:0"`
+	Name      string    `json:"name" gorm:"size:100;not null;uniqueIndex"`
+	SortOrder int       `json:"sort_order" gorm:"default:0;index"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
