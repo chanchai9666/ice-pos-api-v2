@@ -1,4 +1,4 @@
 {
-  "*.{md,json,yaml,yml,js,ts}": "prettier --write",
+  "*": "prettier --ignore-unknown --write",
   "*.go": "gofmt -w"
 }
