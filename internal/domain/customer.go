@@ -59,7 +59,7 @@ type CreditTransaction struct {
 	RefID          string    `json:"ref_id" gorm:"type:varchar(36)"`
 	PaymentMethod  *string   `json:"payment_method,omitempty" gorm:"type:varchar(20)"`
 	Note           *string   `json:"note,omitempty" gorm:"type:text"`
-	IdempotencyKey *string   `json:"idempotency_key,omitempty" gorm:"type:varchar(36);uniqueIndex"`
+	IdempotencyKey *string   `json:"idempotency_key,omitempty" gorm:"type:varchar(100);uniqueIndex"`
 	OccurredAt     time.Time `json:"occurred_at" gorm:"index:idx_credit_cust_date"`
 	CreatedBy      *string   `json:"created_by,omitempty" gorm:"type:varchar(36)"`
 	CreatedAt      time.Time `json:"created_at"`

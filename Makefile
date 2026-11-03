@@ -19,7 +19,7 @@ BUILD_TIME    := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 GIT_COMMIT    := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LDFLAGS       := -s -w -X main.Version=2.0.0 -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)
 
-.PHONY: all help build run dev test test-coverage swagger swag tidy fmt lint clean install-tools
+.PHONY: all help build run dev test test-coverage swagger swag tidy fmt lint clean install-tools migrate migrate-dry-run
 
 all: help
 
@@ -39,6 +39,14 @@ build: ## Build the production binary into bin/api
 run: ## Run the application directly with go run
 	@echo "\033[1;34m==> Running $(APP_NAME)...\033[0m"
 	$(GO) run $(MAIN_SRC)
+
+migrate-dry-run: ## Validate and dry-run migration from v1 SQLite to target DB
+	@echo "\033[1;34m==> Testing v1 to v2 migration in dry-run mode...\033[0m"
+	$(GO) run cmd/migrate/main.go --dry-run
+
+migrate: ## Execute data migration from v1 SQLite to target DB
+	@echo "\033[1;34m==> Executing v1 to v2 data migration...\033[0m"
+	$(GO) run cmd/migrate/main.go --clean --archive-stock --copy-uploads
 
 dev: ## Run application with live reloading using Air (falls back to go run)
 	@if [ -x "$(shell which air 2>/dev/null)" ] || [ -x "$(AIR_BIN)" ]; then \
