@@ -40,6 +40,10 @@ run: ## Run the application directly with go run
 	@echo "\033[1;34m==> Running $(APP_NAME)...\033[0m"
 	$(GO) run $(MAIN_SRC)
 
+run-vision-ai: ## Run the Python Vision AI embedding microservice
+	@echo "\033[1;34m==> Starting Vision AI embedding service on port 5001...\033[0m"
+	cd services/vision-ai && python3 -m uvicorn server:app --port 5001 --reload
+
 migrate-dry-run: ## Validate and dry-run migration from v1 SQLite to target DB
 	@echo "\033[1;34m==> Testing v1 to v2 migration in dry-run mode...\033[0m"
 	$(GO) run cmd/migrate/main.go --dry-run
