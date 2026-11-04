@@ -24,4 +24,5 @@ type UploadOutput struct {
 
 type StorageService interface {
 	Upload(ctx context.Context, input UploadInput) (*UploadOutput, error)
+	Delete(ctx context.Context, fileURL string) error
 }

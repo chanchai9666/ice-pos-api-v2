@@ -29,6 +29,7 @@ type RouterConfig struct {
 	SyncHandler     *handler.SyncHandler
 	CustomerHandler *handler.CustomerHandler
 	UploadHandler   *handler.UploadHandler
+	VisionHandler   *handler.VisionHandler
 }
 
 func SetupRoutes(rc *RouterConfig) {
@@ -88,6 +89,11 @@ func SetupRoutes(rc *RouterConfig) {
 		products.Put("/:id", middleware.AuthMiddleware(rc.JWTService), middleware.RequireRoles(domain.RoleAdmin), rc.CatalogHandler.UpdateProduct)
 		if rc.UploadHandler != nil {
 			products.Post("/:id/image", middleware.AuthMiddleware(rc.JWTService), rc.UploadHandler.UploadProductImage)
+			products.Get("/:id/images", rc.UploadHandler.ListProductImages)
+			products.Post("/:id/images", middleware.AuthMiddleware(rc.JWTService), rc.UploadHandler.AddProductImage)
+			products.Delete("/:id/images/:imageId", middleware.AuthMiddleware(rc.JWTService), rc.UploadHandler.DeleteProductImage)
+			products.Patch("/:id/images/:imageId/primary", middleware.AuthMiddleware(rc.JWTService), rc.UploadHandler.SetPrimaryProductImage)
+			products.Patch("/:id/images/:imageId/embedding", middleware.AuthMiddleware(rc.JWTService), rc.UploadHandler.UpdateProductImageEmbedding)
 		}
 	}
 
@@ -147,6 +153,15 @@ func SetupRoutes(rc *RouterConfig) {
 		{
 			sync.Get("/changes", rc.SyncHandler.PullChanges)
 			sync.Post("/batch", rc.SyncHandler.PushBatch)
+		}
+	}
+
+	// 10. Vision AI
+	if rc.VisionHandler != nil {
+		visionGroup := v1.Group("/vision", middleware.AuthMiddleware(rc.JWTService))
+		{
+			visionGroup.Post("/match", rc.VisionHandler.MatchFrame)
+			visionGroup.Post("/reindex", middleware.RequireRoles(domain.RoleAdmin), rc.VisionHandler.ReindexImages)
 		}
 	}
 }

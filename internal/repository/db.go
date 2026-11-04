@@ -60,6 +60,7 @@ func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 		&domain.User{},
 		&domain.Category{},
 		&domain.Product{},
+		&domain.ProductImage{},
 		&domain.Customer{},
 		&domain.CreditAccount{},
 		&domain.CreditTransaction{},
@@ -69,6 +70,9 @@ func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate database: %w", err)
 	}
+
+	// Backfill existing product images if needed
+	backfillProductImages(db)
 
 	// Seed initial users if empty
 	seedUsers(db)
@@ -152,4 +156,28 @@ func seedUsers(db *gorm.DB) {
 	}
 	db.Create(&p1)
 	db.Create(&p2)
+}
+
+func backfillProductImages(db *gorm.DB) {
+	var products []domain.Product
+	err := db.Where("image_url != '' AND image_url IS NOT NULL AND id NOT IN (SELECT DISTINCT product_id FROM product_images)").Find(&products).Error
+	if err != nil {
+		slog.Warn("Failed to query products for image backfill:", "error", err)
+		return
+	}
+
+	for _, p := range products {
+		img := domain.ProductImage{
+			ID:        uuid.New().String(),
+			ProductID: p.ID,
+			ImageURL:  p.ImageURL,
+			IsPrimary: true,
+			SortOrder: 0,
+			CreatedAt: p.CreatedAt,
+			UpdatedAt: p.UpdatedAt,
+		}
+		if err := db.Create(&img).Error; err != nil {
+			slog.Warn("Failed to backfill product image:", "product_id", p.ID, "error", err)
+		}
+	}
 }

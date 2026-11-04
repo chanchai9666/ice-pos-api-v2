@@ -103,6 +103,90 @@ func (u *catalogUsecase) UpdateProduct(ctx context.Context, product *domain.Prod
 	return nil
 }
 
+func (u *catalogUsecase) AddProductImage(ctx context.Context, input domain.CreateProductImageInput) (*domain.ProductImage, error) {
+	productID := strings.TrimSpace(input.ProductID)
+	if productID == "" {
+		return nil, domain.ErrBadRequest
+	}
+	product, err := u.catalogRepo.GetProductByID(ctx, productID)
+	if err != nil {
+		return nil, err
+	}
+	if product == nil {
+		return nil, domain.ErrNotFound
+	}
+
+	count, err := u.catalogRepo.CountProductImages(ctx, productID)
+	if err != nil {
+		return nil, err
+	}
+	if count >= 10 {
+		return nil, domain.NewAppError(400, "จำนวนรูปภาพสินค้าเกินขีดจำกัด (สูงสุด 10 รูปต่อสินค้า)")
+	}
+
+	img := &domain.ProductImage{
+		ID:             uuid.New().String(),
+		ProductID:      productID,
+		ImageURL:       input.ImageURL,
+		IsPrimary:      input.IsPrimary,
+		SortOrder:      input.SortOrder,
+		Embedding:      input.Embedding,
+		EmbeddingModel: input.EmbeddingModel,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	if err := u.catalogRepo.CreateProductImage(ctx, img); err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+func (u *catalogUsecase) GetProductImageByID(ctx context.Context, id string) (*domain.ProductImage, error) {
+	trimmedID := strings.TrimSpace(id)
+	if trimmedID == "" {
+		return nil, domain.ErrBadRequest
+	}
+	return u.catalogRepo.GetProductImageByID(ctx, trimmedID)
+}
+
+func (u *catalogUsecase) DeleteProductImage(ctx context.Context, productID, imageID string) error {
+	img, err := u.catalogRepo.GetProductImageByID(ctx, imageID)
+	if err != nil {
+		return err
+	}
+	if img.ProductID != productID {
+		return domain.ErrNotFound
+	}
+	return u.catalogRepo.DeleteProductImage(ctx, imageID)
+}
+
+func (u *catalogUsecase) SetPrimaryProductImage(ctx context.Context, productID, imageID string) error {
+	return u.catalogRepo.SetPrimaryProductImage(ctx, productID, imageID)
+}
+
+func (u *catalogUsecase) UpdateProductImageEmbedding(ctx context.Context, productID, imageID string, input domain.UpdateProductImageEmbeddingInput) error {
+	img, err := u.catalogRepo.GetProductImageByID(ctx, imageID)
+	if err != nil {
+		return err
+	}
+	if img.ProductID != productID {
+		return domain.ErrNotFound
+	}
+	if len(input.Embedding) == 0 {
+		return domain.NewAppError(400, "Embedding vector is required")
+	}
+	return u.catalogRepo.UpdateProductImageEmbedding(ctx, imageID, input.Embedding, input.EmbeddingModel)
+}
+
+func (u *catalogUsecase) ListProductImages(ctx context.Context, productID string) ([]domain.ProductImage, error) {
+	return u.catalogRepo.ListProductImages(ctx, productID)
+}
+
+func (u *catalogUsecase) CountProductImages(ctx context.Context, productID string) (int64, error) {
+	return u.catalogRepo.CountProductImages(ctx, productID)
+}
+
 func (u *catalogUsecase) ListCategories(ctx context.Context) ([]domain.Category, error) {
 	return u.catalogRepo.ListCategories(ctx)
 }

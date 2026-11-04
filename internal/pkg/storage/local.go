@@ -48,3 +48,19 @@ func (s *LocalStorageService) Upload(ctx context.Context, input UploadInput) (*U
 		ContentType: input.ContentType,
 	}, nil
 }
+
+func (s *LocalStorageService) Delete(ctx context.Context, fileURL string) error {
+	if strings.TrimSpace(fileURL) == "" {
+		return nil
+	}
+	filename := filepath.Base(fileURL)
+	if filename == "." || filename == "/" || strings.Contains(filename, "..") {
+		return fmt.Errorf("invalid filename in fileURL: %s", fileURL)
+	}
+
+	targetPath := filepath.Join(s.cfg.UploadDir, "images", filename)
+	if err := os.Remove(targetPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete local file: %w", err)
+	}
+	return nil
+}

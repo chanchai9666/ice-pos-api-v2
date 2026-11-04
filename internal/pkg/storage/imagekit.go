@@ -132,3 +132,8 @@ func (s *ImageKitStorageService) Upload(ctx context.Context, input UploadInput) 
 		ContentType:  input.ContentType,
 	}, nil
 }
+
+func (s *ImageKitStorageService) Delete(ctx context.Context, fileURL string) error {
+	// Best-effort delete or no-op when fileId is not readily determinable
+	return nil
+}

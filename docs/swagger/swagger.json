@@ -1065,11 +1065,11 @@
             "BearerAuth": []
           }
         ],
-        "description": "อัปโหลดไฟล์รูปภาพ ปรับขนาด/บีบอัดเป็น .webp ขนาดไม่เกิน 50KB ให้อัตโนมัติ และผูกเข้ากับสินค้าตาม ID ที่ระบุโดยตรง",
+        "description": "อัปโหลดไฟล์รูปภาพ ปรับขนาด/บีบอัดเป็น .webp ขนาดไม่เกิน 50KB ให้อัตโนมัติ และผูกเข้ากับสินค้าตาม ID ที่ระบุโดยตรงเป็นรูปภาพหลัก",
         "consumes": ["multipart/form-data"],
         "produces": ["application/json"],
         "tags": ["Products"],
-        "summary": "อัปโหลดรูปภาพสินค้าโดยตรงพร้อมปรับขนาดและแปลงเป็น WebP ขนาดไม่เกิน 50KB",
+        "summary": "อัปโหลดรูปภาพสินค้าโดยตรงพร้อมปรับขนาดและแปลงเป็น WebP ขนาดไม่เกิน 50KB (Legacy Endpoint)",
         "parameters": [
           {
             "type": "string",
@@ -1097,6 +1097,248 @@
             "description": "Bad Request",
             "schema": {
               "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/products/{id}/images": {
+      "get": {
+        "description": "ดึงรายการรูปภาพทั้งหมดพร้อม Embedding Vector ของสินค้าตาม ID",
+        "produces": ["application/json"],
+        "tags": ["Products"],
+        "summary": "ดูรายการรูปภาพทั้งหมดของสินค้า",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Product ID (UUID)",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.SuccessResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "อัปโหลดไฟล์รูปภาพสินค้า รองรับหลายมุมมอง พร้อมแนบ Embedding Vector (JSON Array of float32) และระบุชื่อโมเดล เพื่อใช้ในการสแกนหาสินค้าด้วยกล้อง",
+        "consumes": ["multipart/form-data"],
+        "produces": ["application/json"],
+        "tags": ["Products"],
+        "summary": "เพิ่มรูปภาพสินค้าพร้อม Embedding สำหรับ Visual AI Matching",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Product ID (UUID)",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "file",
+            "description": "ไฟล์รูปภาพสินค้า",
+            "name": "file",
+            "in": "formData",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "JSON array ของตัวเลข float32 เช่น [0.12, -0.45, ...]",
+            "name": "embedding",
+            "in": "formData"
+          },
+          {
+            "type": "string",
+            "description": "ชื่อหรือเวอร์ชันโมเดล Vision AI เช่น clip-vit-base-patch32",
+            "name": "embedding_model",
+            "in": "formData"
+          },
+          {
+            "type": "boolean",
+            "description": "กำหนดให้เป็นรูปหลักหรือไม่ (true/false)",
+            "name": "is_primary",
+            "in": "formData"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.SuccessResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/products/{id}/images/{imageId}": {
+      "delete": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "ลบรูปภาพสินค้าและลบไฟล์จริงออกจาก Storage หากรูปที่ลบเป็นรูปหลัก ระบบจะสลับรูปถัดไปขึ้นมาเป็นรูปหลักแทนให้อัตโนมัติ",
+        "produces": ["application/json"],
+        "tags": ["Products"],
+        "summary": "ลบรูปภาพสินค้า",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Product ID (UUID)",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Image ID (UUID)",
+            "name": "imageId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.SuccessResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/products/{id}/images/{imageId}/embedding": {
+      "patch": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "ส่ง Embedding Vector ชุดใหม่มาอัปเดตสำหรับรูปเดิม โดยไม่ต้องอัปโหลดไฟล์รูปภาพใหม่ (เหมาะสำหรับการอัปเกรดโมเดล Vision AI)",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Products"],
+        "summary": "อัปเดตเฉพาะ Embedding Vector ของรูปภาพสินค้า",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Product ID (UUID)",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Image ID (UUID)",
+            "name": "imageId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "Embedding vector และ Model",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ice-pos-api-v2_internal_domain.UpdateProductImageEmbeddingInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.SuccessResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/products/{id}/images/{imageId}/primary": {
+      "patch": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "กำหนดรูปภาพเป้าหมายให้เป็น Primary Image สำหรับแสดงบน POS Card พร้อมซิงค์ image_url ของสินค้า",
+        "produces": ["application/json"],
+        "tags": ["Products"],
+        "summary": "ตั้งรูปภาพเป็นรูปหลักของสินค้า",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Product ID (UUID)",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Image ID (UUID)",
+            "name": "imageId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.SuccessResponse"
             }
           },
           "404": {
@@ -1702,6 +1944,88 @@
           }
         }
       }
+    },
+    "/vision/match": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "อัปโหลดเฟรมภาพจากกล้อง (JPG, PNG, WebP) ระบบหลังบ้านจะสกัด Embedding Vector และคำนวณหาความคล้ายคลึงของสินค้า (Cosine Similarity) กับสินค้าในฐานข้อมูล",
+        "consumes": ["multipart/form-data"],
+        "produces": ["application/json"],
+        "tags": ["Vision AI"],
+        "summary": "ค้นหาสินค้าจากเฟรมภาพกล้อง (Server-side Visual AI Recognition)",
+        "parameters": [
+          {
+            "type": "file",
+            "description": "ไฟล์รูปภาพหรือเฟรมกล้อง",
+            "name": "file",
+            "in": "formData",
+            "required": true
+          },
+          {
+            "type": "number",
+            "description": "เกณฑ์ความแม่นยำขั้นต่ำ (Default: 0.70)",
+            "name": "threshold",
+            "in": "formData"
+          },
+          {
+            "type": "integer",
+            "description": "จำนวนผลลัพธ์สูงสุด (Default: 5)",
+            "name": "limit",
+            "in": "formData"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.SuccessResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/vision/reindex": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "สแกนหารูปภาพสินค้าในระบบที่ยังไม่มี Embedding Vector แล้วส่งไปประมวลผลผ่านโมเดล Vision AI หลังบ้าน เพื่อให้พร้อมสำหรับการค้นหาด้วยภาพ",
+        "produces": ["application/json"],
+        "tags": ["Vision AI"],
+        "summary": "สร้าง Vector Embedding ให้กับรูปภาพสินค้าที่ยังไม่มี",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.SuccessResponse"
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "schema": {
+              "$ref": "#/definitions/internal_delivery_http_handler.ErrorResponse"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -1804,6 +2128,12 @@
         "image_url": {
           "type": "string"
         },
+        "images": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ice-pos-api-v2_internal_domain.ProductImage"
+          }
+        },
         "is_active": {
           "type": "boolean"
         },
@@ -1812,6 +2142,41 @@
         },
         "price": {
           "description": "Satang",
+          "type": "integer"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      }
+    },
+    "ice-pos-api-v2_internal_domain.ProductImage": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string"
+        },
+        "embedding": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "embedding_model": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "image_url": {
+          "type": "string"
+        },
+        "is_primary": {
+          "type": "boolean"
+        },
+        "product_id": {
+          "type": "string"
+        },
+        "sort_order": {
           "type": "integer"
         },
         "updated_at": {
@@ -2049,6 +2414,21 @@
           "type": "string"
         },
         "since": {
+          "type": "string"
+        }
+      }
+    },
+    "ice-pos-api-v2_internal_domain.UpdateProductImageEmbeddingInput": {
+      "type": "object",
+      "required": ["embedding"],
+      "properties": {
+        "embedding": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "embedding_model": {
           "type": "string"
         }
       }

@@ -23,7 +23,9 @@ func (r *syncRepository) GetChanges(ctx context.Context, since *time.Time) ([]do
 	var products []domain.Product
 
 	catQuery := r.db.WithContext(ctx).Order("sort_order ASC, name ASC")
-	prodQuery := r.db.WithContext(ctx).Preload("Category").Order("code ASC")
+	prodQuery := r.db.WithContext(ctx).Preload("Category").Preload("Images", func(db *gorm.DB) *gorm.DB {
+		return db.Order("product_images.is_primary DESC, product_images.sort_order ASC, product_images.created_at ASC")
+	}).Order("code ASC")
 
 	if since != nil && !since.IsZero() {
 		catQuery = catQuery.Where("updated_at > ?", *since)

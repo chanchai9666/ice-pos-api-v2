@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"ice-pos-api-v2/internal/domain"
 
@@ -18,9 +19,13 @@ func NewCatalogRepository(db *gorm.DB) domain.CatalogRepository {
 	return &catalogRepository{db: db}
 }
 
+func preloadImages(db *gorm.DB) *gorm.DB {
+	return db.Order("product_images.is_primary DESC, product_images.sort_order ASC, product_images.created_at ASC")
+}
+
 func (r *catalogRepository) GetProductByID(ctx context.Context, id string) (*domain.Product, error) {
 	var prod domain.Product
-	err := r.db.WithContext(ctx).Preload("Category").First(&prod, "id = ?", id).Error
+	err := r.db.WithContext(ctx).Preload("Category").Preload("Images", preloadImages).First(&prod, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound
@@ -36,7 +41,7 @@ func (r *catalogRepository) GetProductByBarcode(ctx context.Context, barcode str
 		return nil, domain.ErrNotFound
 	}
 	var prod domain.Product
-	err := r.db.WithContext(ctx).Preload("Category").First(&prod, "barcode = ? AND is_active = ?", trimmed, true).Error
+	err := r.db.WithContext(ctx).Preload("Category").Preload("Images", preloadImages).First(&prod, "barcode = ? AND is_active = ?", trimmed, true).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound
@@ -52,7 +57,7 @@ func (r *catalogRepository) GetProductByBarcodeExcludeID(ctx context.Context, ba
 		return nil, domain.ErrNotFound
 	}
 	var prod domain.Product
-	query := r.db.WithContext(ctx).Where("barcode = ? AND is_active = ?", trimmed, true)
+	query := r.db.WithContext(ctx).Preload("Images", preloadImages).Where("barcode = ? AND is_active = ?", trimmed, true)
 	if excludeID != "" {
 		query = query.Where("id != ?", excludeID)
 	}
@@ -68,7 +73,7 @@ func (r *catalogRepository) GetProductByBarcodeExcludeID(ctx context.Context, ba
 
 func (r *catalogRepository) GetProductByCode(ctx context.Context, code string) (*domain.Product, error) {
 	var prod domain.Product
-	err := r.db.WithContext(ctx).Preload("Category").First(&prod, "code = ? AND is_active = ?", code, true).Error
+	err := r.db.WithContext(ctx).Preload("Category").Preload("Images", preloadImages).First(&prod, "code = ? AND is_active = ?", code, true).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrNotFound
@@ -80,7 +85,7 @@ func (r *catalogRepository) GetProductByCode(ctx context.Context, code string) (
 
 func (r *catalogRepository) GetProductsByIDs(ctx context.Context, ids []string) ([]domain.Product, error) {
 	var products []domain.Product
-	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&products).Error
+	err := r.db.WithContext(ctx).Preload("Category").Preload("Images", preloadImages).Where("id IN ?", ids).Find(&products).Error
 	return products, err
 }
 
@@ -104,7 +109,7 @@ func (r *catalogRepository) ListProducts(ctx context.Context, search, categoryID
 	}
 
 	var products []domain.Product
-	err := query.Preload("Category").Order("code ASC").Limit(limit).Offset(offset).Find(&products).Error
+	err := query.Preload("Category").Preload("Images", preloadImages).Order("code ASC").Limit(limit).Offset(offset).Find(&products).Error
 	return products, total, err
 }
 
@@ -114,6 +119,159 @@ func (r *catalogRepository) CreateProduct(ctx context.Context, product *domain.P
 
 func (r *catalogRepository) UpdateProduct(ctx context.Context, product *domain.Product) error {
 	return r.db.WithContext(ctx).Save(product).Error
+}
+
+func (r *catalogRepository) CreateProductImage(ctx context.Context, img *domain.ProductImage) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var count int64
+		if err := tx.Model(&domain.ProductImage{}).Where("product_id = ?", img.ProductID).Count(&count).Error; err != nil {
+			return err
+		}
+
+		if count == 0 || img.IsPrimary {
+			img.IsPrimary = true
+			if err := tx.Model(&domain.ProductImage{}).Where("product_id = ?", img.ProductID).Update("is_primary", false).Error; err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Create(img).Error; err != nil {
+			return err
+		}
+
+		updates := map[string]interface{}{
+			"updated_at": time.Now(),
+		}
+		if img.IsPrimary {
+			updates["image_url"] = img.ImageURL
+		}
+		return tx.Model(&domain.Product{}).Where("id = ?", img.ProductID).Updates(updates).Error
+	})
+}
+
+func (r *catalogRepository) GetProductImageByID(ctx context.Context, id string) (*domain.ProductImage, error) {
+	var img domain.ProductImage
+	err := r.db.WithContext(ctx).First(&img, "id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+	return &img, nil
+}
+
+func (r *catalogRepository) ListProductImages(ctx context.Context, productID string) ([]domain.ProductImage, error) {
+	var images []domain.ProductImage
+	err := r.db.WithContext(ctx).Where("product_id = ?", productID).Order("is_primary DESC, sort_order ASC, created_at ASC").Find(&images).Error
+	return images, err
+}
+
+func (r *catalogRepository) DeleteProductImage(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var img domain.ProductImage
+		if err := tx.First(&img, "id = ?", id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrNotFound
+			}
+			return err
+		}
+
+		if err := tx.Delete(&img).Error; err != nil {
+			return err
+		}
+
+		updates := map[string]interface{}{
+			"updated_at": time.Now(),
+		}
+		if img.IsPrimary {
+			var nextImg domain.ProductImage
+			err := tx.Where("product_id = ?", img.ProductID).Order("sort_order ASC, created_at ASC").First(&nextImg).Error
+			if err == nil {
+				if err := tx.Model(&nextImg).Update("is_primary", true).Error; err != nil {
+					return err
+				}
+				updates["image_url"] = nextImg.ImageURL
+			} else {
+				updates["image_url"] = ""
+			}
+		}
+
+		return tx.Model(&domain.Product{}).Where("id = ?", img.ProductID).Updates(updates).Error
+	})
+}
+
+func (r *catalogRepository) SetPrimaryProductImage(ctx context.Context, productID, imageID string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var targetImg domain.ProductImage
+		if err := tx.First(&targetImg, "id = ? AND product_id = ?", imageID, productID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrNotFound
+			}
+			return err
+		}
+
+		if err := tx.Model(&domain.ProductImage{}).Where("product_id = ?", productID).Update("is_primary", false).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&targetImg).Update("is_primary", true).Error; err != nil {
+			return err
+		}
+
+		return tx.Model(&domain.Product{}).Where("id = ?", productID).Updates(map[string]interface{}{
+			"image_url":  targetImg.ImageURL,
+			"updated_at": time.Now(),
+		}).Error
+	})
+}
+
+func (r *catalogRepository) UpdateProductImageEmbedding(ctx context.Context, imageID string, embedding domain.FloatVector, model string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var img domain.ProductImage
+		if err := tx.First(&img, "id = ?", imageID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrNotFound
+			}
+			return err
+		}
+
+		updates := map[string]interface{}{
+			"embedding":  embedding,
+			"updated_at": time.Now(),
+		}
+		if model != "" {
+			updates["embedding_model"] = model
+		}
+
+		if err := tx.Model(&img).Updates(updates).Error; err != nil {
+			return err
+		}
+
+		return tx.Model(&domain.Product{}).Where("id = ?", img.ProductID).Update("updated_at", time.Now()).Error
+	})
+}
+
+func (r *catalogRepository) CountProductImages(ctx context.Context, productID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.ProductImage{}).Where("product_id = ?", productID).Count(&count).Error
+	return count, err
+}
+
+func (r *catalogRepository) ListAllProductImagesWithEmbeddings(ctx context.Context) ([]domain.ProductImage, error) {
+	var images []domain.ProductImage
+	err := r.db.WithContext(ctx).
+		Where("embedding IS NOT NULL AND embedding != '' AND embedding != 'null' AND embedding != '[]'").
+		Find(&images).Error
+	return images, err
+}
+
+func (r *catalogRepository) ListProductImagesWithoutEmbedding(ctx context.Context) ([]domain.ProductImage, error) {
+	var images []domain.ProductImage
+	err := r.db.WithContext(ctx).
+		Where("embedding IS NULL OR embedding = '' OR embedding = 'null' OR embedding = '[]'").
+		Find(&images).Error
+	return images, err
 }
 
 func (r *catalogRepository) ListCategories(ctx context.Context) ([]domain.Category, error) {

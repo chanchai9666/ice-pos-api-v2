@@ -16,6 +16,7 @@ import (
 	"ice-pos-api-v2/internal/pkg/jwt"
 	"ice-pos-api-v2/internal/pkg/logger"
 	"ice-pos-api-v2/internal/pkg/storage"
+	"ice-pos-api-v2/internal/pkg/vision"
 	"ice-pos-api-v2/internal/repository"
 	"ice-pos-api-v2/internal/usecase"
 
@@ -93,6 +94,7 @@ func main() {
 
 	// 6. Services & Usecases
 	storageService := storage.NewStorageService(cfg)
+	visionService := vision.NewClient(cfg.AIEmbeddingServiceURL, 10*time.Second)
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService)
 	userUsecase := usecase.NewUserUsecase(userRepo)
 	catalogUsecase := usecase.NewCatalogUsecase(catalogRepo)
@@ -100,6 +102,7 @@ func main() {
 	saleUsecase := usecase.NewSaleUsecase(saleRepo, catalogRepo, customerRepo)
 	reportUsecase := usecase.NewReportUsecase(reportRepo)
 	syncUsecase := usecase.NewSyncUsecase(syncRepo)
+	visionUsecase := usecase.NewVisionUsecase(catalogRepo, visionService)
 
 	// 7. Handlers
 	healthHandler := handler.NewHealthHandler()
@@ -107,10 +110,11 @@ func main() {
 	userHandler := handler.NewUserHandler(userUsecase)
 	catalogHandler := handler.NewCatalogHandler(catalogUsecase)
 	customerHandler := handler.NewCustomerHandler(customerUsecase)
-	uploadHandler := handler.NewUploadHandler(cfg, catalogUsecase, storageService)
+	uploadHandler := handler.NewUploadHandler(cfg, catalogUsecase, storageService, visionService)
 	saleHandler := handler.NewSaleHandler(saleUsecase)
 	reportHandler := handler.NewReportHandler(reportUsecase)
 	syncHandler := handler.NewSyncHandler(syncUsecase)
+	visionHandler := handler.NewVisionHandler(visionUsecase)
 
 	// 8. Fiber v3 App
 	app := fiber.New(fiber.Config{
@@ -134,6 +138,7 @@ func main() {
 		SaleHandler:     saleHandler,
 		ReportHandler:   reportHandler,
 		SyncHandler:     syncHandler,
+		VisionHandler:   visionHandler,
 	})
 
 	// 10. Graceful Shutdown

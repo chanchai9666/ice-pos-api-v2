@@ -67,12 +67,39 @@ definitions:
         type: string
       image_url:
         type: string
+      images:
+        items:
+          $ref: "#/definitions/ice-pos-api-v2_internal_domain.ProductImage"
+        type: array
       is_active:
         type: boolean
       name:
         type: string
       price:
         description: Satang
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  ice-pos-api-v2_internal_domain.ProductImage:
+    properties:
+      created_at:
+        type: string
+      embedding:
+        items:
+          type: number
+        type: array
+      embedding_model:
+        type: string
+      id:
+        type: string
+      image_url:
+        type: string
+      is_primary:
+        type: boolean
+      product_id:
+        type: string
+      sort_order:
         type: integer
       updated_at:
         type: string
@@ -233,6 +260,17 @@ definitions:
         type: string
       since:
         type: string
+    type: object
+  ice-pos-api-v2_internal_domain.UpdateProductImageEmbeddingInput:
+    properties:
+      embedding:
+        items:
+          type: number
+        type: array
+      embedding_model:
+        type: string
+    required:
+      - embedding
     type: object
   ice-pos-api-v2_internal_domain.User:
     properties:
@@ -1371,7 +1409,7 @@ paths:
         - multipart/form-data
       description:
         อัปโหลดไฟล์รูปภาพ ปรับขนาด/บีบอัดเป็น .webp ขนาดไม่เกิน 50KB ให้อัตโนมัติ
-        และผูกเข้ากับสินค้าตาม ID ที่ระบุโดยตรง
+        และผูกเข้ากับสินค้าตาม ID ที่ระบุโดยตรงเป็นรูปภาพหลัก
       parameters:
         - description: Product ID (UUID)
           in: path
@@ -1402,7 +1440,187 @@ paths:
         - BearerAuth: []
       summary:
         อัปโหลดรูปภาพสินค้าโดยตรงพร้อมปรับขนาดและแปลงเป็น WebP ขนาดไม่เกิน
-        50KB
+        50KB (Legacy Endpoint)
+      tags:
+        - Products
+  /products/{id}/images:
+    get:
+      description: ดึงรายการรูปภาพทั้งหมดพร้อม Embedding Vector ของสินค้าตาม ID
+      parameters:
+        - description: Product ID (UUID)
+          in: path
+          name: id
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.SuccessResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      summary: ดูรายการรูปภาพทั้งหมดของสินค้า
+      tags:
+        - Products
+    post:
+      consumes:
+        - multipart/form-data
+      description:
+        อัปโหลดไฟล์รูปภาพสินค้า รองรับหลายมุมมอง พร้อมแนบ Embedding Vector
+        (JSON Array of float32) และระบุชื่อโมเดล เพื่อใช้ในการสแกนหาสินค้าด้วยกล้อง
+      parameters:
+        - description: Product ID (UUID)
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: ไฟล์รูปภาพสินค้า
+          in: formData
+          name: file
+          required: true
+          type: file
+        - description: JSON array ของตัวเลข float32 เช่น [0.12, -0.45, ...]
+          in: formData
+          name: embedding
+          type: string
+        - description: ชื่อหรือเวอร์ชันโมเดล Vision AI เช่น clip-vit-base-patch32
+          in: formData
+          name: embedding_model
+          type: string
+        - description: กำหนดให้เป็นรูปหลักหรือไม่ (true/false)
+          in: formData
+          name: is_primary
+          type: boolean
+      produces:
+        - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.SuccessResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: เพิ่มรูปภาพสินค้าพร้อม Embedding สำหรับ Visual AI Matching
+      tags:
+        - Products
+  /products/{id}/images/{imageId}:
+    delete:
+      description:
+        ลบรูปภาพสินค้าและลบไฟล์จริงออกจาก Storage หากรูปที่ลบเป็นรูปหลัก
+        ระบบจะสลับรูปถัดไปขึ้นมาเป็นรูปหลักแทนให้อัตโนมัติ
+      parameters:
+        - description: Product ID (UUID)
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: Image ID (UUID)
+          in: path
+          name: imageId
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.SuccessResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: ลบรูปภาพสินค้า
+      tags:
+        - Products
+  /products/{id}/images/{imageId}/embedding:
+    patch:
+      consumes:
+        - application/json
+      description:
+        ส่ง Embedding Vector ชุดใหม่มาอัปเดตสำหรับรูปเดิม โดยไม่ต้องอัปโหลดไฟล์รูปภาพใหม่
+        (เหมาะสำหรับการอัปเกรดโมเดล Vision AI)
+      parameters:
+        - description: Product ID (UUID)
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: Image ID (UUID)
+          in: path
+          name: imageId
+          required: true
+          type: string
+        - description: Embedding vector และ Model
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/ice-pos-api-v2_internal_domain.UpdateProductImageEmbeddingInput"
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.SuccessResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: อัปเดตเฉพาะ Embedding Vector ของรูปภาพสินค้า
+      tags:
+        - Products
+  /products/{id}/images/{imageId}/primary:
+    patch:
+      description:
+        กำหนดรูปภาพเป้าหมายให้เป็น Primary Image สำหรับแสดงบน POS Card
+        พร้อมซิงค์ image_url ของสินค้า
+      parameters:
+        - description: Product ID (UUID)
+          in: path
+          name: id
+          required: true
+          type: string
+        - description: Image ID (UUID)
+          in: path
+          name: imageId
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.SuccessResponse"
+        "404":
+          description: Not Found
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: ตั้งรูปภาพเป็นรูปหลักของสินค้า
       tags:
         - Products
   /products/barcode/{barcode}:
@@ -1862,6 +2080,68 @@ paths:
       summary: รีเซ็ตรหัส PIN พนักงานแคชเชียร์
       tags:
         - Users
+  /vision/match:
+    post:
+      consumes:
+        - multipart/form-data
+      description:
+        อัปโหลดเฟรมภาพจากกล้อง (JPG, PNG, WebP) ระบบหลังบ้านจะสกัด Embedding
+        Vector และคำนวณหาความคล้ายคลึงของสินค้า (Cosine Similarity) กับสินค้าในฐานข้อมูล
+      parameters:
+        - description: ไฟล์รูปภาพหรือเฟรมกล้อง
+          in: formData
+          name: file
+          required: true
+          type: file
+        - description: "เกณฑ์ความแม่นยำขั้นต่ำ (Default: 0.70)"
+          in: formData
+          name: threshold
+          type: number
+        - description: "จำนวนผลลัพธ์สูงสุด (Default: 5)"
+          in: formData
+          name: limit
+          type: integer
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.SuccessResponse"
+        "400":
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: ค้นหาสินค้าจากเฟรมภาพกล้อง (Server-side Visual AI Recognition)
+      tags:
+        - Vision AI
+  /vision/reindex:
+    post:
+      description:
+        สแกนหารูปภาพสินค้าในระบบที่ยังไม่มี Embedding Vector แล้วส่งไปประมวลผลผ่านโมเดล
+        Vision AI หลังบ้าน เพื่อให้พร้อมสำหรับการค้นหาด้วยภาพ
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.SuccessResponse"
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: "#/definitions/internal_delivery_http_handler.ErrorResponse"
+      security:
+        - BearerAuth: []
+      summary: สร้าง Vector Embedding ให้กับรูปภาพสินค้าที่ยังไม่มี
+      tags:
+        - Vision AI
 schemes:
   - http
   - https

@@ -206,13 +206,73 @@
   ```
 - **Response 200 (Success):** ข้อมูลสินค้าที่ได้รับการปรับปรุง
 
-### 4.5 อัปโหลดรูปภาพผูกกับสินค้าโดยตรง
+### 4.5 อัปโหลดรูปภาพผูกกับสินค้าโดยตรง (Legacy Endpoint)
 
 - **URL:** `POST /api/v1/products/:id/image`
-- **Content-Type:** `multipart/form-data` (Field: `file`)
-- **คำอธิบาย:** บีบอัดภาพเป็น WebP <= 50KB และบันทึก `image_url` ในตัวสินค้า
+- **Header:** `Authorization: Bearer <admin_token>`
+- **Content-Type:** `multipart/form-data` (Field: `file` หรือ `image`)
+- **คำอธิบาย:** บีบอัดภาพเป็น WebP <= 50KB บันทึกเข้าตาราง `product_images` และกำหนดให้เป็นรูปหลัก (Primary Image) พร้อมซิงค์ `product.image_url`
 
-### 4.6 ดึงหมวดหมู่สินค้า
+### 4.6 เพิ่มรูปภาพสินค้าพร้อม Embedding สำหรับ Visual AI Matching
+
+- **URL:** `POST /api/v1/products/:id/images`
+- **Header:** `Authorization: Bearer <token>`
+- **Content-Type:** `multipart/form-data`
+- **Form Fields:**
+  - `file` หรือ `image`: (Required) ไฟล์รูปภาพ (.jpg, .jpeg, .png, .webp, .gif ขนาดสูงสุด 10MB)
+  - `embedding`: (Optional) JSON array string ของ float32 เช่น `"[0.123, -0.456, 0.789]"` ที่สกัดจาก transformers.js หรือ onnxruntime-web
+  - `embedding_model`: (Optional) ชื่อหรือเวอร์ชันโมเดล Vision AI เช่น `"clip-vit-base-patch32"`
+  - `is_primary`: (Optional) `"true"` หรือ `"false"` (หากเป็นรูปแรกของสินค้าจะถูกตั้งเป็น true อัตโนมัติ)
+- **Response 201:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "image-uuid",
+      "product_id": "product-uuid",
+      "image_url": "/uploads/images/abc.webp",
+      "is_primary": true,
+      "sort_order": 0,
+      "embedding": [0.123, -0.456, 0.789],
+      "embedding_model": "clip-vit-base-patch32",
+      "created_at": "2026-11-04T13:00:00Z",
+      "updated_at": "2026-11-04T13:00:00Z"
+    }
+  }
+  ```
+
+### 4.7 ดูรายการรูปภาพทั้งหมดของสินค้า
+
+- **URL:** `GET /api/v1/products/:id/images`
+- **Response 200:** รายการรูปภาพทั้งหมดของสินค้า เรียงลำดับรูปหลักขึ้นก่อน (`is_primary DESC, sort_order ASC, created_at ASC`)
+
+### 4.8 ลบรูปภาพสินค้า
+
+- **URL:** `DELETE /api/v1/products/:id/images/:imageId`
+- **Header:** `Authorization: Bearer <token>`
+- **คำอธิบาย:** ลบข้อมูลรูปภาพออกจากฐานข้อมูล พร้อมลบไฟล์จริงออกจาก Storage โดยอัตโนมัติ หากรูปที่ลบเป็นรูปหลัก ระบบจะสลับรูปถัดไปขึ้นมาเป็นรูปหลักแทนทันที
+
+### 4.9 ตั้งรูปภาพเป็นรูปหลัก (Primary Image)
+
+- **URL:** `PATCH /api/v1/products/:id/images/:imageId/primary`
+- **Header:** `Authorization: Bearer <token>`
+- **คำอธิบาย:** เปลี่ยนรูปเป้าหมายให้เป็นรูปหลัก พร้อมอัปเดต `product.image_url`
+
+### 4.10 อัปเดตเฉพาะ Embedding Vector ของรูปภาพ
+
+- **URL:** `PATCH /api/v1/products/:id/images/:imageId/embedding`
+- **Header:** `Authorization: Bearer <token>`
+- **Content-Type:** `application/json`
+- **Request Body:**
+  ```json
+  {
+    "embedding": [0.551, -0.128, 0.994],
+    "embedding_model": "mobilenet-v3-large"
+  }
+  ```
+- **คำอธิบาย:** ใช้สำหรับกรณีที่มีการเปลี่ยนหรืออัปเกรดเวอร์ชันโมเดล Vision AI ที่หน้าบ้าน ทำให้สามารถส่งเฉพาะ Vector ชุดใหม่มาอัปเดตย้อนหลังได้โดยไม่ต้องอัปโหลดไฟล์รูปภาพซ้ำ
+
+### 4.11 ดึงหมวดหมู่สินค้า
 
 - **URL:** `GET /api/v1/categories`
 
