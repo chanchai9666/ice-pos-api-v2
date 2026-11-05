@@ -44,7 +44,7 @@ func (u *visionUsecase) MatchFrame(ctx context.Context, imageBytes []byte, thres
 
 	queryEmbedding, queryModel, err := u.visionService.ExtractEmbedding(ctx, imageBytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract embedding from query frame: %w", err)
+		return nil, domain.NewAppError(http.StatusServiceUnavailable, fmt.Sprintf("ไม่สามารถสกัด Vector จากภาพได้ (กรุณาตรวจสอบว่า Vision AI Service พอร์ต 5001 เปิดใช้งานแล้วหรือไม่): %v", err))
 	}
 
 	productImages, err := u.catalogRepo.ListAllProductImagesWithEmbeddings(ctx)
