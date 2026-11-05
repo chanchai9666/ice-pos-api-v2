@@ -31,6 +31,10 @@ uploads/
 # Log files
 *.log
 
+# AI Models
+models/*.onnx
+!models/.gitkeep
+
 # Temporary test/scratch files
 scratch_*
 

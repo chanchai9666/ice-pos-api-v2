@@ -32,6 +32,8 @@ type Config struct {
 	ImageKitURLEndpoint   string
 	ImageKitFolder        string
 	AIEmbeddingServiceURL string
+	VisionModelPath       string
+	VisionSharedLibPath   string
 }
 
 func LoadConfig() *Config {
@@ -72,6 +74,8 @@ func LoadConfig() *Config {
 		ImageKitURLEndpoint:   getEnv("IMAGEKIT_URL_ENDPOINT", ""),
 		ImageKitFolder:        getEnv("IMAGEKIT_FOLDER", "pos"),
 		AIEmbeddingServiceURL: getEnv("AI_EMBEDDING_SERVICE_URL", "http://localhost:5001"),
+		VisionModelPath:       getEnv("VISION_MODEL_PATH", "models/clip_vision_model.onnx"),
+		VisionSharedLibPath:   getEnv("ONNXRUNTIME_SHARED_LIBRARY_PATH", ""),
 	}
 
 	return cfg

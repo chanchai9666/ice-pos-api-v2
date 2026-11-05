@@ -44,6 +44,12 @@ run-vision-ai: ## Run the Python Vision AI embedding microservice
 	@echo "\033[1;34m==> Starting Vision AI embedding service on port 5001...\033[0m"
 	cd services/vision-ai && python3 -m uvicorn server:app --port 5001 --reload
 
+download-vision-model: ## Download CLIP ONNX vision model for in-process Go AI inference
+	@echo "\033[1;34m==> Downloading CLIP vision ONNX model into models/clip_vision_model.onnx...\033[0m"
+	@mkdir -p models
+	@curl -L -o models/clip_vision_model.onnx https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/vision_model_quantized.onnx
+	@echo "\033[1;32m==> Model downloaded successfully!\033[0m"
+
 migrate-dry-run: ## Validate and dry-run migration from v1 SQLite to target DB
 	@echo "\033[1;34m==> Testing v1 to v2 migration in dry-run mode...\033[0m"
 	$(GO) run cmd/migrate/main.go --dry-run

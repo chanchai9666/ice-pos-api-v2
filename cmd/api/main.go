@@ -13,6 +13,7 @@ import (
 	"ice-pos-api-v2/internal/delivery/http/handler"
 	"ice-pos-api-v2/internal/delivery/http/middleware"
 	"ice-pos-api-v2/internal/delivery/http/router"
+	"ice-pos-api-v2/internal/domain"
 	"ice-pos-api-v2/internal/pkg/jwt"
 	"ice-pos-api-v2/internal/pkg/logger"
 	"ice-pos-api-v2/internal/pkg/storage"
@@ -94,7 +95,18 @@ func main() {
 
 	// 6. Services & Usecases
 	storageService := storage.NewStorageService(cfg)
-	visionService := vision.NewClient(cfg.AIEmbeddingServiceURL, 10*time.Second)
+
+	// In-process Go ONNX Engine (Single Binary), with fallback to HTTP sidecar
+	var visionService domain.VisionEmbeddingService
+	if onnxEngine, err := vision.NewONNXEngine(cfg.VisionModelPath, cfg.VisionSharedLibPath); err == nil {
+		slog.Info("Successfully initialized in-process Go ONNX Vision Engine", "model", cfg.VisionModelPath)
+		visionService = onnxEngine
+		defer onnxEngine.Close()
+	} else {
+		slog.Warn("In-process ONNX engine not available, falling back to HTTP client", "err", err)
+		visionService = vision.NewClient(cfg.AIEmbeddingServiceURL, 10*time.Second)
+	}
+
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtService)
 	userUsecase := usecase.NewUserUsecase(userRepo)
 	catalogUsecase := usecase.NewCatalogUsecase(catalogRepo)
